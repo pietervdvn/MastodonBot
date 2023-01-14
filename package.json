@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsc",
     "lint": "tslint --project ./tsconfig.json -t stylish",
-    "start": "ts-node src/index.ts",
+    "start": "nvm use && ts-node src/index.ts",
     "test": "doctest-ts-improved src/ && mocha --require ts-node/register \"./**/*.doctest.ts\" && (find . -type f -name \"*.doctest.ts\" | xargs rm)"
   },
   "dependencies": {

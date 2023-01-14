@@ -174,7 +174,6 @@ export class Postbuilder {
                 const props = image.changeset.properties
                 const uid = ""+props.uid
 
-
                 if (result.indexOf(image) >= 0) {
                     continue
                 }
@@ -200,6 +199,7 @@ export class Postbuilder {
             themeBonus[theme] = (themeBonus[theme] ?? 0) - 1
             const uid = randomBestImage.changeset.properties.uid
             alreadyEncounteredUid.set(uid, (alreadyEncounteredUid.get(uid) ?? 0) + 1)
+            console.log("Selecting image",randomBestImage.image," by ", randomBestImage.changeset.properties.user+" with score "+bestImageScore)
         }
 
         return result

@@ -45,7 +45,7 @@ export default class OsmUserInfo {
         const div = document.createElement("div")
         div.innerHTML = userdata.description
         const links = Array.from(div.getElementsByTagName("a"))
-        const meLinks = links.filter(link => link.getAttribute("rel").split(" ").indexOf("me") >= 0)
+        const meLinks = links.filter(link => link.getAttribute("rel")?.split(" ")?.indexOf("me") >= 0)
         return meLinks.map(link => link.href.toString()) //*/
     }
 

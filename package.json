@@ -1,0 +1,42 @@
+{
+  "name": "mastodon-bot",
+  "version": "0.0.1",
+  "author": "Pietervdvn",
+  "license": "GPL",
+  "description": "Experimenting with mastodon-bot",
+  "repository": "https://github.com/pietervdvn/matrix-bot",
+  "bugs": {
+    "url": "https://github.com/pietervdvn/matrix-bot/issues"
+  },
+  "keywords": [
+    "Mastodon",
+    "OpenStreetMap",
+    "bot"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "tslint --project ./tsconfig.json -t stylish",
+    "start": "ts-node src/index.ts",
+    "test": "doctest-ts-improved src/ && mocha --require ts-node/register \"./**/*.doctest.ts\" && (find . -type f -name \"*.doctest.ts\" | xargs rm)"
+  },
+  "dependencies": {
+    "@types/node-fetch": "^2.6.2",
+    "@types/showdown": "^2.0.0",
+    "doctest-ts-improved": "^0.8.7",
+    "escape-html": "^1.0.3",
+    "fake-dom": "^1.0.4",
+    "fs": "^0.0.1-security",
+    "https": "^1.0.0",
+    "masto": "^5.4.0",
+    "mocha": "^10.0.0",
+    "node-fetch": "^3.3.0",
+    "showdown": "^2.1.0",
+    "ts-node": "^10.7.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^14.18.5",
+    "tslint": "^6.1.3",
+    "typescript": "^4.7.4"
+  }
+}

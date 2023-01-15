@@ -205,7 +205,7 @@ export class Postbuilder {
         return result
     }
 
-    public async buildMessage(): Promise<void> {
+    public async buildMessage(date:string): Promise<void> {
         const changesets = this._changesetsMade
         const perContributor = new Histogram(changesets, cs => cs.properties.uid)
 
@@ -226,7 +226,7 @@ export class Postbuilder {
         const {totalImagesCreated, attachmentIds, imgAuthors, totalImageContributorCount} = await this.prepareImages(changesets, 12)
 
         let toSend: string[] = [
-            "Today, " + perContributor.keys().length + " different persons made " + totalStats.total + " changes to #OpenStreetMap using https://mapcomplete.osm.be .\n",
+            "Yesterday, " + perContributor.keys().length + " different persons made " + totalStats.total + " changes to #OpenStreetMap using https://mapcomplete.osm.be .\n",
         ]
 
         for (let i = 0; i < this._config.postSettings.topContributorsNumberToShow - 1 && i < topContributors.length; i++) {
@@ -270,7 +270,9 @@ export class Postbuilder {
         await this._poster.writeMessage([
             "In total, "+totalImageContributorCount+" different contributors uploaded "+totalImagesCreated+" images.\n",
             "Images in this thread are randomly selected from them and were made by: ",
-            ...Array.from(new Set<string>(imgAuthors)).map(auth => "- "+auth )
+            ...Array.from(new Set<string>(imgAuthors)).map(auth => "- "+auth ),
+            "",
+            "Changeset of "+date
             
         ].join("\n"),{
             inReplyToId: secondPost["id"],
@@ -302,6 +304,10 @@ export class Postbuilder {
         const attachmentIds: string[] = []
         const imgAuthors: string[] = []
         for (const randomImage of randomImages) {
+            if(this._config.mastodonAuth.dryrun){
+                console.log("Not uploading/downloading image:"+randomImage.image+" dryrun")
+                continue
+            }
             const id = randomImage.image.substring(randomImage.image.lastIndexOf("/") + 1)
             const path = this._config.cacheDir + "/image_" + id
             await Utils.DownloadBlob(randomImage.image, path)

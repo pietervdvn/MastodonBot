@@ -33,7 +33,7 @@ export class Main {
         let changesets: ChangeSetData[] = await osmcha.DownloadStatsForDay(today.getUTCFullYear(), today.getUTCMonth() + 1,  today.getUTCDate() - 1)
       
         console.log("Building post...")
-        await new Postbuilder(this._config, poster, changesets).buildMessage()
+        await new Postbuilder(this._config, poster, changesets).buildMessage(today.getUTCFullYear()+"-"+ (today.getUTCMonth() + 1) +  (today.getUTCDate() - 1))
 
     }
 

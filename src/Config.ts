@@ -1,5 +1,22 @@
 import {LoginSettings} from "./Mastodon";
 
+export interface MapCompleteUsageOverview {
+    topContributorsNumberToShow: number,
+    topThemesNumberToShow: number,
+
+    /**
+     * The number of days to look back. 
+     */
+    numberOfDays?: 1 | number
+    
+    /**
+     * Only show changes made with this theme.
+     * If omitted: show all themes
+     */
+    themeWhitelist?: string[]
+    
+}
+
 export default interface Config {
     /**
      * Default: https://www.openstreetmap.org
@@ -18,8 +35,5 @@ export default interface Config {
         /** IF set: prints to console instead of to Mastodon*/
         dryrun?: boolean
     },
-    postSettings:{
-        topContributorsNumberToShow: number,
-        topThemesNumberToShow: number
-    }
+    actions: {mapCompleteUsageOverview : MapCompleteUsageOverview} []
 }

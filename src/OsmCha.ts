@@ -56,7 +56,7 @@ export default class OsmCha {
         month: number,
         day: number
     ): Promise<ChangeSetData[]> {
-        const path = this._cachepath + "_" + year + "_" + Utils. TwoDigits(month) + "_" + Utils. TwoDigits(day) + ".json";
+        const path = this._cachepath + "_" + year + "_" + Utils.TwoDigits(month) + "_" + Utils.TwoDigits(day) + ".json";
         if (fs.existsSync(path)) {
             try {
                 return JSON.parse(fs.readFileSync(path, "utf8")).features
@@ -66,15 +66,16 @@ export default class OsmCha {
         }
         let page = 1
         let allFeatures = []
-        let endDay = new Date(year, month - 1 /* Zero-indexed: 0 = january*/, day + 1)
+        const startDay = new Date(year, month - 1, day)
+
+        let endDay = new Date(startDay.getTime() + 1000 * 60 * 60 * 24)
+        const start_date = year + "-" + Utils.TwoDigits(month) + "-" + Utils.TwoDigits(day)
         let endDate = `${endDay.getFullYear()}-${Utils.TwoDigits(
             endDay.getMonth() + 1
         )}-${Utils.TwoDigits(endDay.getDate())}`
+        console.log(start_date, "-->", endDate)
         let url = this.urlTemplate
-            .replace(
-                "{start_date}",
-                year + "-" + Utils.TwoDigits(month) + "-" + Utils.TwoDigits(day)
-            )
+            .replace("{start_date}", start_date)
             .replace("{end_date}", endDate)
             .replace("{page}", "" + page)
 
@@ -96,11 +97,11 @@ export default class OsmCha {
         while (url) {
             const result = await Utils.DownloadJson(url, headers)
             page++
-            allFeatures.push(...result.features)
             if (result.features === undefined) {
                 console.log("ERROR", result)
                 return
             }
+            allFeatures.push(...result.features)
             url = result.next
         }
         allFeatures = allFeatures.filter(f => f !== undefined && f !== null)

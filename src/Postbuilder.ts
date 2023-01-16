@@ -2,7 +2,7 @@ import Histogram from "./Histogram";
 import Utils from "./Utils";
 import {ChangeSetData} from "./OsmCha";
 import OsmUserInfo from "./OsmUserInfo";
-import Config from "./Config";
+import Config, {MapCompleteUsageOverview} from "./Config";
 import MastodonPoster from "./Mastodon";
 import ImgurAttribution from "./ImgurAttribution";
 
@@ -17,11 +17,14 @@ export class Postbuilder {
         "plantnet-ai-detection",
         "link-image"
     ]
-    private readonly _config: Config;
+    private readonly _config: MapCompleteUsageOverview;
+    private readonly _globalConfig: Config
+    
     private readonly _poster: MastodonPoster;
     private readonly _changesetsMade: ChangeSetData[];
 
-    constructor(config: Config, poster: MastodonPoster, changesetsMade: ChangeSetData[]) {
+    constructor(config: MapCompleteUsageOverview, globalConfig: Config, poster: MastodonPoster, changesetsMade: ChangeSetData[]) {
+        this._globalConfig = globalConfig;
         this._poster = poster;
         this._config = config;
         // Ignore 'custom' themes, they can be confusing for uninitiated users and give ugly link + we don't endorse them
@@ -112,7 +115,7 @@ export class Postbuilder {
 
 
     async createOverviewForContributor(uid: string, changesetsMade: ChangeSetData[]): Promise<string> {
-        const userinfo = new OsmUserInfo(Number(uid), this._config)
+        const userinfo = new OsmUserInfo(Number(uid), this._globalConfig)
         const inf = await userinfo.getUserInfo()
 
         const themes = new Histogram(changesetsMade, cs => cs.properties.theme)
@@ -170,7 +173,7 @@ export class Postbuilder {
                 const props = image.changeset.properties
                 const uid = "" + props.uid
 
-                if (result.indexOf(image) >= 0) {
+                if (result.findIndex(i => i.image === image.image) >= 0) {
                     continue
                 }
 
@@ -226,11 +229,15 @@ export class Postbuilder {
             totalImageContributorCount
         } = await this.prepareImages(changesets, 12)
 
+        let timePeriod = "Yesterday"
+        if(this._config.numberOfDays > 1){
+            timePeriod = "In the past "+this._config.numberOfDays+" days"
+        }
         let toSend: string[] = [
-            "Yesterday, " + perContributor.keys().length + " different persons made " + totalStats.total + " changes to #OpenStreetMap using https://mapcomplete.osm.be .\n",
+            timePeriod+", " + perContributor.keys().length + " different persons made " + totalStats.total + " changes to #OpenStreetMap using https://mapcomplete.osm.be .\n",
         ]
 
-        for (let i = 0; i < this._config.postSettings.topContributorsNumberToShow - 1 && i < topContributors.length; i++) {
+        for (let i = 0; i < this._config.topContributorsNumberToShow - 1 && i < topContributors.length; i++) {
             const uid = topContributors[i].key
             const changesetsMade = perContributor.get(uid)
             try {
@@ -257,7 +264,7 @@ export class Postbuilder {
             dropZeroValues: true
         })
         toSend.push("")
-        for (let i = 0; i < this._config.postSettings.topThemesNumberToShow && i < mostPopularThemes.length; i++) {
+        for (let i = 0; i < this._config.topThemesNumberToShow && i < mostPopularThemes.length; i++) {
             const theme = mostPopularThemes[i].key
             const changesetsMade = perTheme.get(theme)
             toSend.push(await this.createOverviewForTheme(theme, changesetsMade))
@@ -275,7 +282,7 @@ export class Postbuilder {
                 "Images in this thread are randomly selected from them and were made by: ",
                 ...authorNames.map(auth => "- " + auth),
                 "",
-                "All changes were made on " + date
+                "All changes were made on " + date + (this._config.numberOfDays > 1 ? " or at most "+this._config.numberOfDays+"days before": "")
 
             ].join("\n"), {
                 inReplyToId: secondPost["id"],
@@ -291,15 +298,20 @@ export class Postbuilder {
         const totalImagesCreated = Utils.Sum(withImage.map(cs => cs.properties["add-image"]))
 
         const images: ImageInfo[] = []
+        const seenURLS = new Set<string>()
         for (const changeset of withImage) {
 
-            const url = this._config.osmBackend + "/api/0.6/changeset/" + changeset.id + "/download"
+            const url = this._globalConfig.osmBackend + "/api/0.6/changeset/" + changeset.id + "/download"
             const osmChangeset = await Utils.DownloadXml(url)
             const osmChangesetTags: { k: string, v: string }[] = Array.from(osmChangeset.getElementsByTagName("tag"))
                 .map(tag => ({k: tag.getAttribute("k"), v: tag.getAttribute("v")}))
                 .filter(kv => kv.k.startsWith("image"))
 
             for (const kv of osmChangesetTags) {
+                if(seenURLS.has(kv.v)){
+                    continue
+                }
+                seenURLS.add(kv.v)
                 images.push({image: kv.v, changeset})
             }
         }
@@ -312,19 +324,19 @@ export class Postbuilder {
             const cs = randomImage.changeset.properties
             let authorName = cs.user
             try {
-                const authorInfo = new OsmUserInfo(Number(cs.uid), this._config)
+                const authorInfo = new OsmUserInfo(Number(cs.uid), this._globalConfig)
                 authorName = (await authorInfo.GetMastodonLink()) ?? cs.user
             }catch (e) {
                 console.log("Could not fetch more info about contributor", authorName, cs.uid, "due to", e)
             }
             imgAuthors.push(authorName)
-            if (this._config.mastodonAuth.dryrun) {
+            if (this._globalConfig.mastodonAuth.dryrun) {
                 console.log("Not uploading/downloading image:" + randomImage.image + " dryrun")
                 continue
             }
             const attribution = await ImgurAttribution.DownloadAttribution(randomImage.image)
             const id = randomImage.image.substring(randomImage.image.lastIndexOf("/") + 1)
-            const path = this._config.cacheDir + "/image_" + id
+            const path = this._globalConfig.cacheDir + "/image_" + id
             await Utils.DownloadBlob(randomImage.image, path)
             const mediaId = await this._poster.uploadImage(path, "Image taken by " + authorName + ", available under " + attribution.license + ". It is made with the thematic map " + randomImage.changeset.properties.theme + " in changeset https://openstreetmap.org/changeset/" + randomImage.changeset.id)
             attachmentIds.push(mediaId)

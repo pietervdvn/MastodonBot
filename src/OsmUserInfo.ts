@@ -57,7 +57,7 @@ export default class OsmUserInfo {
         div.innerHTML = userdata.description
         const links = Array.from(div.getElementsByTagName("a"))
         const meLinks = links.filter(link => link.getAttribute("rel")?.split(" ")?.indexOf("me") >= 0)
-        return meLinks.map(link => link.href.toString()) //*/
+        return meLinks.map(link => link.href.toString())
     }
 
     public async getUserInfo(): Promise<UserInfo> {

@@ -39,6 +39,17 @@ export default class OsmUserInfo {
         }
 
     }
+    
+    public async GetMastodonLink(): Promise<string | undefined> {
+        const mastodonLinks = await this.getMeLinks()
+
+        if (mastodonLinks.length <= 0) {
+            return undefined
+        }
+        
+        const url = new URL(mastodonLinks[0])
+        return url.pathname.substring(1) + "@" + url.host
+    } 
 
     public async getMeLinks(): Promise<string[]> {
         const userdata = await this.getUserInfo()

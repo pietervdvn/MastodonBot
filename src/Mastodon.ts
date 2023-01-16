@@ -39,7 +39,7 @@ export default class MastodonPoster {
     
     public async writeMessage(text: string, options?: CreateStatusParamsBase): Promise<{id: string}>{
         if(this._dryrun){  
-            console.log("Dryrun enabled; not posting:\n", text.split("\n").map(txt => "  > "+txt).join("\n"))
+            console.log("Dryrun enabled - not posting",options?.visibility??"public","message: \n" + text.split("\n").map(txt => "  > "+txt).join("\n"))
             return {id: "some_id"}
         }
         const statusUpate = await this.instance.v1.statuses.create({

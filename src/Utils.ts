@@ -1,5 +1,6 @@
 import https from "https";
 import * as fs from "fs";
+import {DOMParser} from '@xmldom/xmldom'
 
 export default class Utils {
     public static async DownloadJson(url, headers?: any): Promise<any> {
@@ -25,11 +26,17 @@ export default class Utils {
         return "" + i
     }
 
+    public static async DownloadXml(url, headers?: any): Promise<Document> {
+        const content = await Utils.Download(url, {...headers, accept: "application/xml"})
+        const parser = new DOMParser();
+        return parser.parseFromString(content.content, "text/xml");
+    }
+
     public static Download(url, headers?: any): Promise<{ content: string }> {
         return new Promise((resolve, reject) => {
             try {
                 headers = headers ?? {}
-                headers.accept = "application/json"
+                headers.accept ??= "application/json"
                 const urlObj = new URL(url)
                 https.get(
                     {
@@ -60,20 +67,20 @@ export default class Utils {
 
     /**
      * Adds commas and a single 'and' between the given items
-     * 
+     *
      * Utils.commasAnd(["A","B","C"]) // => "A, B and C"
      * Utils.commasAnd(["A"]) // => "A"
      * Utils.commasAnd([]) // => ""
      */
-    public static commasAnd(items: string[]){
-        if(items.length === 1){
+    public static commasAnd(items: string[]) {
+        if (items.length === 1) {
             return items[0]
         }
-        if(items.length === 0){
+        if (items.length === 0) {
             return ""
         }
-        const last = items[items.length - 1 ]
-        return items.slice(0, items.length - 1).join(", ") + " and "+last
+        const last = items[items.length - 1]
+        return items.slice(0, items.length - 1).join(", ") + " and " + last
     }
 
     public static DownloadBlob(url: string, filepath: string): Promise<string> {

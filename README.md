@@ -11,7 +11,7 @@ Changesets which have the `add-image`-tag are downloaded from the OSM-api and cr
 Note that the image selection process is opinionated: some themes (artwork, nature, trees, ...) have a higher probability of being picked.
 Furthermore, it tries to pick at most one image per contributor - so images by the same contributor will only be used if there are more images to add then contributors.
 
-## Your bot mentioned me - I don't want that!
+## Disabling mentions
 
 You can indicate this to the bot in the following way:
 

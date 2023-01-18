@@ -5,6 +5,11 @@ export interface MapCompleteUsageOverview {
     showTopThemes?: boolean,
 
     /**
+     * Add a content warning to all posts
+     */
+    contentWarning?: string,
+
+    /**
      * Term to use in 'created/moved/deleted one point'
      */
     poiName?: "point" | string

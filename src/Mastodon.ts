@@ -76,7 +76,7 @@ export default class MastodonPoster {
         if (descrParts.indexOf("#nobot") >= 0 || descrParts.indexOf("#nomapcompletebot") >= 0) {
             return true
         }
-        const nobot = info.fields.find(f => f.name === "nobot").value
+        const nobot = info.fields.find(f => f.name === "nobot")?.value ?? ""
         if (nobot.toLowerCase() === "yes" || nobot.toLowerCase() === "true") {
             return true
         }

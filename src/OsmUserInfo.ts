@@ -22,7 +22,7 @@ export default class OsmUserInfo {
     private _userData: UserInfo = undefined
     private readonly _cachingPath: string | undefined;
 
-    constructor(userId: number, options?:
+    constructor(userId: number, options:
         {
             osmBackend?: string,
             cacheDir?: string

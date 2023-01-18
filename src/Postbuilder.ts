@@ -4,8 +4,8 @@ import {ChangeSetData} from "./OsmCha";
 import OsmUserInfo from "./OsmUserInfo";
 import Config, {MapCompleteUsageOverview} from "./Config";
 import MastodonPoster from "./Mastodon";
-import ImgurAttribution from "./ImgurAttribution";
 import Overpass from "./Overpass";
+import ImageUploader from "./ImageUploader";
 
 type ImageInfo = { image: string, changeset: ChangeSetData }
 
@@ -35,13 +35,15 @@ export class Postbuilder {
     }
 
 
-    getStatisticsFor(changesetsMade?: ChangeSetData[]): { total: number, 
+    getStatisticsFor(changesetsMade?: ChangeSetData[]): {
+        total: number,
         answered?: number,
         created?: number,
-        addImage?: number, 
-        deleted: number, 
-        moved?: number, 
-        summaryText?: string } {
+        addImage?: number,
+        deleted: number,
+        moved?: number,
+        summaryText?: string
+    } {
 
         const stats: Record<string, number> = {}
         changesetsMade ??= this._changesetsMade
@@ -63,11 +65,11 @@ export class Postbuilder {
         const linkedImages = stats["link-image"]
         const poi = this._config.poiName ?? "point"
         const pois = this._config.poisName ?? "points"
-        if(create){
+        if (create) {
             if (create == 1) {
-                overview.push("added one "+poi)
+                overview.push("added one " + poi)
             } else {
-                overview.push("added " + create +" "+pois)
+                overview.push("added " + create + " " + pois)
             }
         }
         if (answer) {
@@ -87,17 +89,17 @@ export class Postbuilder {
 
         if (move) {
             if (move == 1) {
-                overview.push("moved one "+poi)
+                overview.push("moved one " + poi)
             } else {
-                overview.push("moved " + move + " "+pois)
+                overview.push("moved " + move + " " + pois)
             }
         }
 
         if (deleted) {
             if (deleted == 1) {
-                overview.push("deleted one "+poi)
+                overview.push("deleted one " + poi)
             } else {
-                overview.push("deleted " + deleted + " "+pois)
+                overview.push("deleted " + deleted + " " + pois)
             }
         }
 
@@ -162,11 +164,15 @@ export class Postbuilder {
         return `${contribCountStr} ${statistics.summaryText} on https://mapcomplete.osm.be/${theme}`
     }
 
-    public selectImages(images: ImageInfo[], targetCount: number = 4):
+    /**
+     * Creates a new list of images, sorted by priority.
+     * It tries to order them in such a way that the number of contributors is as big as possible.
+     * However, it is biased to select pictures from certain themes too
+     * @param images
+     */
+    public selectImages(images: ImageInfo[]):
         ImageInfo[] {
-        if (images.length <= targetCount) {
-            return images
-        }
+
         const themeBonus = {
             climbing: 1,
             rainbow_crossings: 1,
@@ -184,7 +190,7 @@ export class Postbuilder {
         const alreadyEncounteredUid = new Map<string, number>()
 
         const result: ImageInfo[] = []
-        for (let i = 0; i < targetCount; i++) {
+        for (let i = 0; i < images.length; i++) {
             let bestImageScore: number = -999999999
             let bestImageOptions: ImageInfo[] = []
 
@@ -228,17 +234,18 @@ export class Postbuilder {
         let lastPostId: string = undefined
 
 
-        if(this._config.report){
+        if (this._config.report) {
             const report = this._config.report
             const overpass = new Overpass(report)
             const data = await overpass.query()
             const total = data.elements.length
             const date = data.osm3s.timestamp_osm_base.substring(0, 10)
             lastPostId = (await this._poster.writeMessage(
-                report.post.replace(/{total}/g, ""+total).replace(/{date}/g, date)
+                report.post.replace(/{total}/g, "" + total).replace(/{date}/g, date),
+                {spoilerText: this._config.contentWarning}
             )).id
         }
-        
+
         const perContributor = new Histogram(changesets, cs => cs.properties.uid)
         const topContributors = perContributor.sortedByCount({
             countMethod: cs => {
@@ -254,12 +261,12 @@ export class Postbuilder {
 
 
         const totalStats = this.getStatisticsFor()
-         const {
+        const {
             totalImagesCreated,
-            attachmentIds,
-            imgAuthors,
+            randomImages,
             totalImageContributorCount
-        } = await this.prepareImages(changesets, 12)
+        } = await this.prepareImages(changesets)
+        const imageUploader = new ImageUploader(randomImages, this._poster, this._globalConfig)
 
         let timePeriod = "Yesterday"
         if (this._config.numberOfDays > 1) {
@@ -276,7 +283,7 @@ export class Postbuilder {
                 const uid = topContributor.key
                 const changesetsMade = perContributor.get(uid)
                 try {
-                    const userInfo = new OsmUserInfo(Number(uid))
+                    const userInfo = new OsmUserInfo(Number(uid), this._globalConfig)
                     const {nobot} = await userInfo.hasNoBotTag()
                     if (nobot) {
                         continue
@@ -290,7 +297,11 @@ export class Postbuilder {
                     console.error("Could not add contributor " + uid, e)
                 }
             }
-            lastPostId = (await this._poster.writeMessage(toSend.join("\n"), {mediaIds: attachmentIds.slice(0, 4)})).id
+            lastPostId = (await this._poster.writeMessage(toSend.join("\n"),
+                {
+                    mediaIds: await imageUploader.attemptToUpload(4),
+                    spoilerText: this._config.contentWarning
+                })).id
             toSend = []
         }
 
@@ -316,30 +327,33 @@ export class Postbuilder {
 
             lastPostId = (await this._poster.writeMessage(toSend.join("\n"), {
                 inReplyToId: lastPostId,
-                mediaIds: attachmentIds.slice(4, 8)
+                mediaIds: await imageUploader.attemptToUpload(4),
+                spoilerText: this._config.contentWarning
             })).id
             toSend = []
         }
 
 
-        const authorNames = Array.from(new Set<string>(imgAuthors))
+        const images = await imageUploader.attemptToUpload(4)
+        const authors = Array.from(new Set(imageUploader.getCurrentAuthors()))
         await this._poster.writeMessage([
                 "In total, " + totalImageContributorCount + " different contributors uploaded " + totalImagesCreated + " images.\n",
                 "Images in this thread are randomly selected from them and were made by: ",
-                ...authorNames.map(auth => "- " + auth),
+                ...authors.map(auth => "- " + auth),
                 "",
                 "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
 
             ].join("\n"), {
                 inReplyToId: lastPostId,
-                mediaIds: attachmentIds.slice(8, 12)
+                mediaIds: images,
+                spoilerText: this._config.contentWarning
             }
         )
 
 
     }
 
-    private async prepareImages(changesets: ChangeSetData[], targetCount: number = 4): Promise<{ imgAuthors: string[], attachmentIds: string[], totalImagesCreated: number, totalImageContributorCount: number }> {
+    private async prepareImages(changesets: ChangeSetData[]): Promise<{ randomImages: { image: string, changeset: ChangeSetData }[], totalImagesCreated: number, totalImageContributorCount: number }> {
         const withImage: ChangeSetData[] = changesets.filter(cs => cs.properties["add-image"] > 0)
         const totalImagesCreated = Utils.Sum(withImage.map(cs => cs.properties["add-image"]))
 
@@ -347,7 +361,7 @@ export class Postbuilder {
         const seenURLS = new Set<string>()
         for (const changeset of withImage) {
 
-            const userinfo = new OsmUserInfo(Number(changeset.properties.uid))
+            const userinfo = new OsmUserInfo(Number(changeset.properties.uid), this._globalConfig)
             const {nobot} = await userinfo.hasNoBotTag()
             if (nobot) {
                 console.log("Not indexing images of user", changeset.properties.user)
@@ -369,35 +383,10 @@ export class Postbuilder {
             }
         }
 
-        const randomImages: ImageInfo[] = this.selectImages(images, targetCount)
-        const attachmentIds: string[] = []
-        const imgAuthors: string[] = []
-        for (const randomImage of randomImages) {
+        const randomImages: ImageInfo[] = this.selectImages(images)
 
-            const cs = randomImage.changeset.properties
-            let authorName = cs.user
-            try {
-                const authorInfo = new OsmUserInfo(Number(cs.uid), this._globalConfig)
-                authorName = (await authorInfo.GetMastodonUsername(this._poster)) ?? cs.user
-            } catch (e) {
-                console.log("Could not fetch more info about contributor", authorName, cs.uid, "due to", e)
-            }
-            imgAuthors.push(authorName)
-            if (this._globalConfig.mastodonAuth.dryrun) {
-                console.log("Not uploading/downloading image:" + randomImage.image + " dryrun")
-                continue
-            }
-            const attribution = await ImgurAttribution.DownloadAttribution(randomImage.image)
-            const id = randomImage.image.substring(randomImage.image.lastIndexOf("/") + 1)
-            const path = this._globalConfig.cacheDir + "/image_" + id
-            await Utils.DownloadBlob(randomImage.image, path)
-            const mediaId = await this._poster.uploadImage(path, "Image taken by " + authorName + ", available under " + attribution.license + ". It is made with the thematic map " + randomImage.changeset.properties.theme + " in changeset https://openstreetmap.org/changeset/" + randomImage.changeset.id)
-            attachmentIds.push(mediaId)
-
-        }
         return {
-            attachmentIds,
-            imgAuthors,
+            randomImages,
             totalImagesCreated,
             totalImageContributorCount: new Set(withImage.map(cs => cs.properties.uid)).size
         }

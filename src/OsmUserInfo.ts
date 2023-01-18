@@ -1,5 +1,6 @@
 import Utils from "./Utils";
 import * as fs from "fs";
+import MastodonPoster from "./Mastodon";
 
 export interface UserInfo {
     "id": number,
@@ -40,7 +41,27 @@ export default class OsmUserInfo {
 
     }
     
-    public async GetMastodonLink(): Promise<string | undefined> {
+    public async hasNoBotTag(): Promise<{
+        nobot: boolean,
+        nomention: boolean
+    }>{
+        const description = (await this.getUserInfo()).description ?? ""
+        const split = description.toLowerCase().replace(/-/g, "").split(" ")
+        const nobot = split.indexOf("#nobot") >=0 || split.indexOf("#nomapcompletebot") >= 0
+        const nomention = split.indexOf("#nobotmention") >=0 || split.indexOf("#nomapcompletebotmention") >= 0
+        return {nobot, nomention}
+    }
+
+    /**
+     * Gets the Mastodon username of the this OSM-user to ping them.
+     * @param mastodonApi: will be used to lookup the metadata of the user; if they have '#nobot' in their bio, don't mention them
+     * @constructor
+     */
+    public async GetMastodonUsername(mastodonApi: MastodonPoster): Promise<string | undefined> {
+        const {nomention} = await this.hasNoBotTag()
+        if(nomention){
+            return undefined
+        }
         const mastodonLinks = await this.getMeLinks()
 
         if (mastodonLinks.length <= 0) {
@@ -48,7 +69,13 @@ export default class OsmUserInfo {
         }
         
         const url = new URL(mastodonLinks[0])
-        return url.pathname.substring(1) + "@" + url.host
+        const username = url.pathname.substring(1) + "@" + url.host
+        
+        if(await mastodonApi.hasNoBot(username)){
+            return undefined
+        }
+        const useraccount = await mastodonApi.userInfoFor(username)
+        return useraccount.acct
     } 
 
     public async getMeLinks(): Promise<string[]> {
@@ -80,7 +107,7 @@ export default class OsmUserInfo {
             }
         }
         const url = `${this._backend}api/0.6/user/${this._userId}.json`
-        console.log("Looking up user info about ", this._userId)
+        console.log("Looking up OSM user info about ", this._userId)
         const res = await Utils.DownloadJson(url);
         this._userData = res.user
         if (this._cachingPath !== undefined) {

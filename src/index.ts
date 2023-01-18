@@ -17,6 +17,7 @@ export class Main {
     }
 
     async main() {
+        const poster = await MastodonPoster.construct(this._config.mastodonAuth)
 
         if (fakedom === undefined || window === undefined) {
             throw "FakeDom not initialized"
@@ -27,8 +28,7 @@ export class Main {
             console.log("Created the caching directory at", this._config.cacheDir)
         }
 
-        const poster = await MastodonPoster.construct(this._config.mastodonAuth)
-
+       
         const notice = await poster.writeMessage("@pietervdvn@en.osm.town Starting MapComplete bot...", {
             visibility: "direct"
         })
@@ -42,7 +42,7 @@ export class Main {
 
             const end = Date.now()
             const timeNeeded = Math.floor((end - start) / 1000)
-            await poster.writeMessage("Finished running MapComplete bot, this took " + timeNeeded + "seconds", {
+            await poster.writeMessage("@pietervdvn@en.osm.town Finished running MapComplete bot, this took " + timeNeeded + "seconds", {
                 inReplyToId: notice.id,
                 visibility: "direct"
             })
@@ -50,7 +50,7 @@ export class Main {
             console.error(e)
             const end = Date.now()
             const timeNeeded = Math.floor((end - start) / 1000)
-            await poster.writeMessage("Running MapComplete bot failed in " + timeNeeded + "seconds, the error is " + e, {
+            await poster.writeMessage("@pietervdvn@en.osm.town Running MapComplete bot failed in " + timeNeeded + "seconds, the error is " + e, {
                 inReplyToId: notice.id,
                 visibility: "direct"
             })
@@ -58,14 +58,13 @@ export class Main {
 
     }
 
-    private async runMapCompleteOverviewAction(poster: MastodonPoster, action: { mapCompleteUsageOverview: MapCompleteUsageOverview }) {
+    private async runMapCompleteOverviewAction(poster: MastodonPoster, action: MapCompleteUsageOverview) {
         console.log("Fetching recent changesets...")
         const osmcha = new OsmCha(this._config)
         const today = new Date()
 
-        const overviewSettings = action.mapCompleteUsageOverview
         let changesets: ChangeSetData[] = []
-        const days = overviewSettings.numberOfDays ?? 1
+        const days = action.numberOfDays ?? 1
         if (days < 1) {
             throw new Error("Invalid config: numberOfDays should be >= 1")
         }
@@ -82,19 +81,19 @@ export class Main {
 
         }
 
-        if (overviewSettings.themeWhitelist?.length > 0) {
-            const allowedThemes = new Set(overviewSettings.themeWhitelist)
+        if (action.themeWhitelist?.length > 0) {
+            const allowedThemes = new Set(action.themeWhitelist)
             const beforeCount = changesets.length
             changesets = changesets.filter(cs => allowedThemes.has(cs.properties.theme))
             if (changesets.length == 0) {
-                console.log("No changesets found for themes", overviewSettings.themeWhitelist.join(", "))
-                return console.log("No changesets found for themes", overviewSettings.themeWhitelist.join(", "))
+                console.log("No changesets found for themes", action.themeWhitelist.join(", "))
+                return console.log("No changesets found for themes", action.themeWhitelist.join(", "))
             }
-            console.log("Filtering for ", overviewSettings.themeWhitelist, "yielded", changesets.length, "changesets (" + beforeCount + " before)")
+            console.log("Filtering for ", action.themeWhitelist, "yielded", changesets.length, "changesets (" + beforeCount + " before)")
         }
 
         console.log("Building post...")
-        await new Postbuilder(overviewSettings, this._config, poster, changesets).buildMessage(today.getUTCFullYear() + "-" + Utils.TwoDigits(today.getUTCMonth() + 1) + "-" + Utils.TwoDigits(today.getUTCDate() - 1))
+        await new Postbuilder(action, this._config, poster, changesets).buildMessage(today.getUTCFullYear() + "-" + Utils.TwoDigits(today.getUTCMonth() + 1) + "-" + Utils.TwoDigits(today.getUTCDate() - 1))
 
     }
 

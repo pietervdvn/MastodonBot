@@ -5,12 +5,14 @@ import OsmUserInfo from "./OsmUserInfo";
 import Config, {MapCompleteUsageOverview} from "./Config";
 import MastodonPoster from "./Mastodon";
 import ImgurAttribution from "./ImgurAttribution";
+import Overpass from "./Overpass";
 
 type ImageInfo = { image: string, changeset: ChangeSetData }
 
 export class Postbuilder {
     private static readonly metakeys = [
         "answer",
+        "create",
         "add-image",
         "move",
         "delete",
@@ -19,7 +21,7 @@ export class Postbuilder {
     ]
     private readonly _config: MapCompleteUsageOverview;
     private readonly _globalConfig: Config
-    
+
     private readonly _poster: MastodonPoster;
     private readonly _changesetsMade: ChangeSetData[];
 
@@ -33,7 +35,13 @@ export class Postbuilder {
     }
 
 
-    getStatisticsFor(changesetsMade?: ChangeSetData[]): { total: number, addImage?: number, deleted: number, answered?: number, moved?: number, summaryText?: string } {
+    getStatisticsFor(changesetsMade?: ChangeSetData[]): { total: number, 
+        answered?: number,
+        created?: number,
+        addImage?: number, 
+        deleted: number, 
+        moved?: number, 
+        summaryText?: string } {
 
         const stats: Record<string, number> = {}
         changesetsMade ??= this._changesetsMade
@@ -48,11 +56,20 @@ export class Postbuilder {
         }
 
         let overview: string[] = []
-        const {answer, move} = stats
+        const {answer, move, create} = stats
         const deleted = stats.delete
         const images = stats["add-image"]
         const plantnetDetected = stats["plantnet-ai-detection"]
         const linkedImages = stats["link-image"]
+        const poi = this._config.poiName ?? "point"
+        const pois = this._config.poisName ?? "points"
+        if(create){
+            if (create == 1) {
+                overview.push("added one "+poi)
+            } else {
+                overview.push("added " + create +" "+pois)
+            }
+        }
         if (answer) {
             if (answer == 1) {
                 overview.push("answered one question")
@@ -70,17 +87,17 @@ export class Postbuilder {
 
         if (move) {
             if (move == 1) {
-                overview.push("moved one point")
+                overview.push("moved one "+poi)
             } else {
-                overview.push("moved " + move + " points")
+                overview.push("moved " + move + " "+pois)
             }
         }
 
         if (deleted) {
             if (deleted == 1) {
-                overview.push("delted one deleted")
+                overview.push("deleted one "+poi)
             } else {
-                overview.push("deleted " + deleted + " points")
+                overview.push("deleted " + deleted + " "+pois)
             }
         }
 
@@ -120,16 +137,18 @@ export class Postbuilder {
 
         const themes = new Histogram(changesetsMade, cs => cs.properties.theme)
 
-        let username = await userinfo.GetMastodonLink() ?? inf.display_name
+        let username = await userinfo.GetMastodonUsername(this._poster) ?? inf.display_name
 
         const statistics = this.getStatisticsFor(changesetsMade)
 
-        let thematicMaps = "maps " + Utils.commasAnd(themes.keys())
-        if (themes.keys().length === 1) {
-            thematicMaps = "map " + Utils.commasAnd(themes.keys())
+        let thematicMaps = " with the thematic maps " + Utils.commasAnd(themes.keys())
+        if (this._config?.themeWhitelist?.length === 1) {
+            thematicMaps = ""
+        } else if (themes.keys().length === 1) {
+            thematicMaps = " with the thematic map " + Utils.commasAnd(themes.keys())
         }
 
-        return username + " " + statistics.summaryText + " with the thematic " + thematicMaps
+        return username + " " + statistics.summaryText + thematicMaps
     }
 
     async createOverviewForTheme(theme: string, changesetsMade: ChangeSetData[]): Promise<string> {
@@ -206,8 +225,21 @@ export class Postbuilder {
 
     public async buildMessage(date: string): Promise<void> {
         const changesets = this._changesetsMade
-        const perContributor = new Histogram(changesets, cs => cs.properties.uid)
+        let lastPostId: string = undefined
 
+
+        if(this._config.report){
+            const report = this._config.report
+            const overpass = new Overpass(report)
+            const data = await overpass.query()
+            const total = data.elements.length
+            const date = data.osm3s.timestamp_osm_base.substring(0, 10)
+            lastPostId = (await this._poster.writeMessage(
+                report.post.replace(/{total}/g, ""+total).replace(/{date}/g, date)
+            )).id
+        }
+        
+        const perContributor = new Histogram(changesets, cs => cs.properties.uid)
         const topContributors = perContributor.sortedByCount({
             countMethod: cs => {
                 let sum = 0
@@ -222,7 +254,7 @@ export class Postbuilder {
 
 
         const totalStats = this.getStatisticsFor()
-        const {
+         const {
             totalImagesCreated,
             attachmentIds,
             imgAuthors,
@@ -230,30 +262,37 @@ export class Postbuilder {
         } = await this.prepareImages(changesets, 12)
 
         let timePeriod = "Yesterday"
-        if(this._config.numberOfDays > 1){
-            timePeriod = "In the past "+this._config.numberOfDays+" days"
+        if (this._config.numberOfDays > 1) {
+            timePeriod = "In the past " + this._config.numberOfDays + " days"
         }
+        const singleTheme = this._config?.themeWhitelist?.length === 1 ? "/" + this._config.themeWhitelist[0] : ""
         let toSend: string[] = [
-            timePeriod+", " + perContributor.keys().length + " different persons made " + totalStats.total + " changes to #OpenStreetMap using https://mapcomplete.osm.be .\n",
+            `${timePeriod}, ${perContributor.keys().length} persons made ${totalStats.total} changes to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme} .
+`,
         ]
 
-        for (let i = 0; i < this._config.topContributorsNumberToShow - 1 && i < topContributors.length; i++) {
-            const uid = topContributors[i].key
-            const changesetsMade = perContributor.get(uid)
-            try {
-                const overview = await this.createOverviewForContributor(uid, changesetsMade)
-                if (overview.length + toSend.join("\n").length > 500) {
-                    break
+        if (this._config.showTopContributors && topContributors.length > 0) {
+            for (const topContributor of topContributors) {
+                const uid = topContributor.key
+                const changesetsMade = perContributor.get(uid)
+                try {
+                    const userInfo = new OsmUserInfo(Number(uid))
+                    const {nobot} = await userInfo.hasNoBotTag()
+                    if (nobot) {
+                        continue
+                    }
+                    const overview = await this.createOverviewForContributor(uid, changesetsMade)
+                    if (overview.length + toSend.join("\n").length > 500) {
+                        break
+                    }
+                    toSend.push(" - " + overview)
+                } catch (e) {
+                    console.error("Could not add contributor " + uid, e)
                 }
-                toSend.push(" - " + overview)
-            } catch (e) {
-                console.error("Could not add contributor " + uid, e)
             }
-
+            lastPostId = (await this._poster.writeMessage(toSend.join("\n"), {mediaIds: attachmentIds.slice(0, 4)})).id
+            toSend = []
         }
-
-        const firstPost = await this._poster.writeMessage(toSend.join("\n"), {mediaIds: attachmentIds.slice(0, 4)})
-        toSend = []
 
         const perTheme = new Histogram(changesets, cs => {
             return cs.properties.theme;
@@ -263,17 +302,24 @@ export class Postbuilder {
             countMethod: cs => this.getStatisticsFor([cs]).total,
             dropZeroValues: true
         })
-        toSend.push("")
-        for (let i = 0; i < this._config.topThemesNumberToShow && i < mostPopularThemes.length; i++) {
-            const theme = mostPopularThemes[i].key
-            const changesetsMade = perTheme.get(theme)
-            toSend.push(await this.createOverviewForTheme(theme, changesetsMade))
-        }
+        if (this._config.showTopThemes && mostPopularThemes.length > 0) {
 
-        const secondPost = await this._poster.writeMessage(toSend.join("\n"), {
-            inReplyToId: firstPost["id"],
-            mediaIds: attachmentIds.slice(4, 8)
-        })
+            for (const theme of mostPopularThemes) {
+                const themeId = theme.key
+                const changesetsMade = perTheme.get(themeId)
+                const overview = await this.createOverviewForTheme(themeId, changesetsMade)
+                if (overview.length + toSend.join("\n").length > 500) {
+                    break
+                }
+                toSend.push(overview)
+            }
+
+            lastPostId = (await this._poster.writeMessage(toSend.join("\n"), {
+                inReplyToId: lastPostId,
+                mediaIds: attachmentIds.slice(4, 8)
+            })).id
+            toSend = []
+        }
 
 
         const authorNames = Array.from(new Set<string>(imgAuthors))
@@ -282,10 +328,10 @@ export class Postbuilder {
                 "Images in this thread are randomly selected from them and were made by: ",
                 ...authorNames.map(auth => "- " + auth),
                 "",
-                "All changes were made on " + date + (this._config.numberOfDays > 1 ? " or at most "+this._config.numberOfDays+"days before": "")
+                "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
 
             ].join("\n"), {
-                inReplyToId: secondPost["id"],
+                inReplyToId: lastPostId,
                 mediaIds: attachmentIds.slice(8, 12)
             }
         )
@@ -301,6 +347,13 @@ export class Postbuilder {
         const seenURLS = new Set<string>()
         for (const changeset of withImage) {
 
+            const userinfo = new OsmUserInfo(Number(changeset.properties.uid))
+            const {nobot} = await userinfo.hasNoBotTag()
+            if (nobot) {
+                console.log("Not indexing images of user", changeset.properties.user)
+                continue
+            }
+
             const url = this._globalConfig.osmBackend + "/api/0.6/changeset/" + changeset.id + "/download"
             const osmChangeset = await Utils.DownloadXml(url)
             const osmChangesetTags: { k: string, v: string }[] = Array.from(osmChangeset.getElementsByTagName("tag"))
@@ -308,7 +361,7 @@ export class Postbuilder {
                 .filter(kv => kv.k.startsWith("image"))
 
             for (const kv of osmChangesetTags) {
-                if(seenURLS.has(kv.v)){
+                if (seenURLS.has(kv.v)) {
                     continue
                 }
                 seenURLS.add(kv.v)
@@ -320,13 +373,13 @@ export class Postbuilder {
         const attachmentIds: string[] = []
         const imgAuthors: string[] = []
         for (const randomImage of randomImages) {
-          
+
             const cs = randomImage.changeset.properties
             let authorName = cs.user
             try {
                 const authorInfo = new OsmUserInfo(Number(cs.uid), this._globalConfig)
-                authorName = (await authorInfo.GetMastodonLink()) ?? cs.user
-            }catch (e) {
+                authorName = (await authorInfo.GetMastodonUsername(this._poster)) ?? cs.user
+            } catch (e) {
                 console.log("Could not fetch more info about contributor", authorName, cs.uid, "due to", e)
             }
             imgAuthors.push(authorName)
@@ -340,7 +393,7 @@ export class Postbuilder {
             await Utils.DownloadBlob(randomImage.image, path)
             const mediaId = await this._poster.uploadImage(path, "Image taken by " + authorName + ", available under " + attribution.license + ". It is made with the thematic map " + randomImage.changeset.properties.theme + " in changeset https://openstreetmap.org/changeset/" + randomImage.changeset.id)
             attachmentIds.push(mediaId)
-           
+
         }
         return {
             attachmentIds,

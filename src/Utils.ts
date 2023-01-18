@@ -5,7 +5,13 @@ import {DOMParser} from '@xmldom/xmldom'
 export default class Utils {
     public static async DownloadJson(url, headers?: any): Promise<any> {
         const data = await Utils.Download(url, headers)
+        try{
+            
         return JSON.parse(data.content)
+        }catch (e) {
+            console.log("Could not parse the result of ", url,": not a valid json:\n  ",data.content)
+            throw e
+        }
     }
 
     public static Sum(t: (number | undefined)[]) {

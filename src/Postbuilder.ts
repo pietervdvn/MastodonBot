@@ -274,7 +274,7 @@ export class Postbuilder {
         }
         const singleTheme = this._config?.themeWhitelist?.length === 1 ? "/" + this._config.themeWhitelist[0] : ""
         let toSend: string[] = [
-            `${timePeriod}, ${perContributor.keys().length} persons made ${totalStats.total} changes to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme} .
+            `${timePeriod}, ${perContributor.keys().length} people made ${totalStats.total} changes to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme} .
 `,
         ]
 

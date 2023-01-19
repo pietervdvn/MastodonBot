@@ -74,8 +74,11 @@ export default class OsmUserInfo {
         if(await mastodonApi.hasNoBot(username)){
             return undefined
         }
-        const useraccount = await mastodonApi.userInfoFor(username)
-        return useraccount.acct
+        let useraccount = (await mastodonApi.userInfoFor(username)).acct
+        if(!useraccount.startsWith("@")){
+            useraccount = "@"+useraccount
+        }
+        return useraccount
     } 
 
     public async getMeLinks(): Promise<string[]> {

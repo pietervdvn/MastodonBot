@@ -3,7 +3,6 @@ import * as fs from "fs"
 import MastodonPoster from "./Mastodon";
 import OsmCha, {ChangeSetData} from "./OsmCha";
 import Config, {MapCompleteUsageOverview} from "./Config";
-import * as configF from "../config/config.json"
 import {Postbuilder} from "./Postbuilder";
 import Utils from "./Utils";
 
@@ -11,8 +10,16 @@ export class Main {
 
     private readonly _config: Config;
 
-    constructor(config: Config) {
-        this._config = config;
+    constructor(config: string | Config) {
+        if(config === undefined){
+            console.log("Needs an argument: path of config file")
+            throw "No path given"
+        }
+        if (typeof config === "string") {
+            this._config = JSON.parse(fs.readFileSync(config, {encoding: "utf-8"}))
+        } else {
+            this._config = config;
+        }
         this._config.osmBackend ??= "https://www.openstreetmap.org"
     }
 
@@ -28,10 +35,7 @@ export class Main {
             console.log("Created the caching directory at", this._config.cacheDir)
         }
 
-       
-        const notice = await poster.writeMessage("@pietervdvn@en.osm.town Starting MapComplete bot...", {
-            visibility: "direct"
-        })
+
         const start = Date.now()
         try {
 
@@ -42,16 +46,11 @@ export class Main {
 
             const end = Date.now()
             const timeNeeded = Math.floor((end - start) / 1000)
-            await poster.writeMessage("@pietervdvn@en.osm.town Finished running MapComplete bot, this took " + timeNeeded + "seconds", {
-                inReplyToId: notice.id,
-                visibility: "direct"
-            })
         } catch (e) {
             console.error(e)
             const end = Date.now()
             const timeNeeded = Math.floor((end - start) / 1000)
             await poster.writeMessage("@pietervdvn@en.osm.town Running MapComplete bot failed in " + timeNeeded + "seconds, the error is " + e, {
-                inReplyToId: notice.id,
                 visibility: "direct"
             })
         }
@@ -101,4 +100,4 @@ export class Main {
 }
 
 
-new Main(configF).main().then(_ => console.log("All done"))
+new Main(process.argv[2]).main().then(_ => console.log("All done"))

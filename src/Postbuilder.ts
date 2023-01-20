@@ -337,19 +337,21 @@ export class Postbuilder {
 
         const images = await imageUploader.attemptToUpload(4)
         const authors = Array.from(new Set(imageUploader.getCurrentAuthors()))
-        await this._poster.writeMessage([
-                "In total, " + totalImageContributorCount + " different contributors uploaded " + totalImagesCreated + " images.\n",
-                "Images in this thread are randomly selected from them and were made by: ",
-                ...authors.map(auth => "- " + auth),
-                "",
-                "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
-
-            ].join("\n"), {
-                inReplyToId: lastPostId,
-                mediaIds: images,
-                spoilerText: this._config.contentWarning
-            }
-        )
+        if(authors.length > 0){
+            await this._poster.writeMessage([
+                    "In total, " + totalImageContributorCount + " different contributors uploaded " + totalImagesCreated + " images.\n",
+                    "Images in this thread are randomly selected from them and were made by: ",
+                    ...authors.map(auth => "- " + auth),
+                    "",
+                    "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
+    
+                ].join("\n"), {
+                    inReplyToId: lastPostId,
+                    mediaIds: images,
+                    spoilerText: this._config.contentWarning
+                }
+            )
+        }
 
 
     }

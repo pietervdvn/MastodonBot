@@ -30,14 +30,18 @@ export default class MastodonPoster {
     private readonly instance;
     private _dryrun: boolean;
     private _userInfoCache: Record<string, any> = {}
+    public readonly hostname: string;
 
-    private constructor(masto, dryrun: boolean) {
+    private constructor(masto, dryrun: boolean, hostname: string) {
         this.instance = masto
         this._dryrun = dryrun;
+        this.hostname = hostname
     }
 
     public static async construct(settings: LoginParams & { dryrun?: boolean }) {
-        return new MastodonPoster(await login(settings), settings.dryrun ?? false)
+        return new MastodonPoster(await login(settings), settings.dryrun ?? false, 
+            new URL(settings.url).hostname
+            )
     }
 
     public async writeMessage(text: string, options?: CreateStatusParamsBase): Promise<{ id: string }> {

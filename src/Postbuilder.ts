@@ -229,6 +229,46 @@ export class Postbuilder {
         return result
     }
 
+    public async GroupTopcontributorsForTheme(theme: string, topContributors: { key: string; count: number }[], perContributor: Histogram<ChangeSetData>, maxCount = 3): Promise<{ alreadyMentioned: Set<string>; message: string }> {
+        const alreadyMentioned = new Set<string>()
+        const etymologyContributors: { username: string }[] = []
+        for (const topContributor of topContributors) {
+            const uid = topContributor.key
+            const changesetsMade = perContributor.get(uid)
+            if (changesetsMade.find(cs => cs.properties.theme !== theme)) {
+                continue
+            }
+            // This is an etymology-only contributor
+            alreadyMentioned.add(uid)
+            const userInfo = new OsmUserInfo(Number(uid), this._globalConfig)
+            const {nobot} = await userInfo.hasNoBotTag()
+            if (nobot) {
+                continue
+            }
+            const info = await userInfo.getUserInfo()
+            const username = await userInfo.GetMastodonUsername(this._poster) ?? info.display_name
+            etymologyContributors.push({username})
+        }
+        let message: string
+        if(etymologyContributors.length <= 1){
+            return {
+                alreadyMentioned: new Set<string>(),
+                message: undefined
+            }
+        }
+        if (etymologyContributors.length <= 4) {
+            message = "- " + Utils.commasAnd(etymologyContributors.map(c => c.username)) + " contributed with ${theme}"
+        } else {
+            message = `- ${etymologyContributors.slice(0, 3).map(c => c.username).join(", ")} and ${etymologyContributors.length - 3} others contributed with thematic map ${theme}`
+
+        }
+
+        return {
+            alreadyMentioned,
+            message
+        }
+    }
+
     public async buildMessage(date: string): Promise<void> {
         const changesets = this._changesetsMade
         let lastPostId: string = undefined
@@ -278,9 +318,24 @@ export class Postbuilder {
 `,
         ]
 
+
         if (this._config.showTopContributors && topContributors.length > 0) {
+
+            // We group contributors that only contributed to 'etymology' as they otherwise spam the first entry
+
+            const {
+                alreadyMentioned,
+                message
+            } = await this.GroupTopcontributorsForTheme("etymology", topContributors, perContributor)
+            if(message?.length > 0){
+                toSend.push(message)
+            }
+
             for (const topContributor of topContributors) {
                 const uid = topContributor.key
+                if (alreadyMentioned.has(uid)) {
+                    continue
+                }
                 const changesetsMade = perContributor.get(uid)
                 try {
                     const userInfo = new OsmUserInfo(Number(uid), this._globalConfig)

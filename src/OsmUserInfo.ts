@@ -69,7 +69,7 @@ export default class OsmUserInfo {
         }
         
         const url = new URL(mastodonLinks[0])
-        const username = url.pathname.substring(1) + "@" + url.host
+        const username = url.pathname.substring(1) +(url.host === mastodonApi.hostname ? "" : "@" + url.host)
         
         if(await mastodonApi.hasNoBot(username)){
             return undefined

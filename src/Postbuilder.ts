@@ -257,9 +257,9 @@ export class Postbuilder {
             }
         }
         if (etymologyContributors.length <= 4) {
-            message = "- " + Utils.commasAnd(etymologyContributors.map(c => c.username)) + " contributed with ${theme}"
+            message = Utils.commasAnd(etymologyContributors.map(c => c.username)) + " contributed with ${theme}"
         } else {
-            message = `- ${etymologyContributors.slice(0, 3).map(c => c.username).join(", ")} and ${etymologyContributors.length - 3} others contributed with thematic map ${theme}`
+            message = `${etymologyContributors.slice(0, 3).map(c => c.username).join(", ")} and ${etymologyContributors.length - 3} others contributed with thematic map ${theme}`
 
         }
 
@@ -314,8 +314,8 @@ export class Postbuilder {
         }
         const singleTheme = this._config?.themeWhitelist?.length === 1 ? "/" + this._config.themeWhitelist[0] : ""
         let toSend: string[] = [
-            `${timePeriod}, ${perContributor.keys().length} people made ${totalStats.total} changes to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme} .
-`,
+            `${timePeriod}, ${perContributor.keys().length} people made ${totalStats.total} changes to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme}`,
+            ""
         ]
 
 
@@ -344,10 +344,10 @@ export class Postbuilder {
                         continue
                     }
                     const overview = await this.createOverviewForContributor(uid, changesetsMade)
-                    if (("- " + overview).length + toSend.join("\n").length > 500) {
+                    if (overview.length + toSend.join("\n").length > 500) {
                         break
                     }
-                    toSend.push("- " + overview)
+                    toSend.push(overview)
                 } catch (e) {
                     console.error("Could not add contributor " + uid, e)
                 }
@@ -396,7 +396,9 @@ export class Postbuilder {
             await this._poster.writeMessage([
                     "In total, " + totalImageContributorCount + " different contributors uploaded " + totalImagesCreated + " images.\n",
                     "Images in this thread are randomly selected from them and were made by: ",
-                    ...authors.map(auth => "- " + auth),
+                    ...authors,
+                    "",
+                    "A big thanks to everyone who is contributing!",
                     "",
                     "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
 

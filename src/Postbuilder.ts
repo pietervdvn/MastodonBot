@@ -257,7 +257,7 @@ export class Postbuilder {
             }
         }
         if (etymologyContributors.length <= 4) {
-            message = `${Utils.commasAnd(etymologyContributors.map(c => c.username))} contributed with ${theme}`
+            message = `${Utils.commasAnd(etymologyContributors.map(c => c.username))} contributed with thematic map ${theme}`
         } else {
             message = `${etymologyContributors.slice(0, 3).map(c => c.username).join(", ")} and ${etymologyContributors.length - 3} others contributed with thematic map ${theme}`
 

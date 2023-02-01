@@ -92,7 +92,8 @@ export class Main {
         }
 
         console.log("Building post...")
-        await new Postbuilder(action, this._config, poster, changesets).buildMessage(today.getUTCFullYear() + "-" + Utils.TwoDigits(today.getUTCMonth() + 1) + "-" + Utils.TwoDigits(today.getUTCDate() - 1))
+        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+        await new Postbuilder(action, this._config, poster, changesets).buildMessage(yesterday.getUTCFullYear() + "-" + Utils.TwoDigits(yesterday.getUTCMonth() + 1) + "-" + Utils.TwoDigits(yesterday.getUTCDate()))
 
     }
 

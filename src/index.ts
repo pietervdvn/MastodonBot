@@ -38,16 +38,13 @@ export class Main {
 
         const start = Date.now()
         try {
-
             for (const action of this._config.actions) {
                 console.log("Running action", action)
                 await this.runMapCompleteOverviewAction(poster, action)
             }
-
-            const end = Date.now()
-            const timeNeeded = Math.floor((end - start) / 1000)
         } catch (e) {
-            console.error(e)
+            console.error("Caught top level exception: ", e)
+            console.log(e.stack)
             const end = Date.now()
             const timeNeeded = Math.floor((end - start) / 1000)
             await poster.writeMessage("@pietervdvn@en.osm.town Running MapComplete bot failed in " + timeNeeded + "seconds, the error is " + e, {

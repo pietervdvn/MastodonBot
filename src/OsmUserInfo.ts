@@ -1,6 +1,7 @@
 import Utils from "./Utils";
 import * as fs from "fs";
 import MastodonPoster from "./Mastodon";
+import {userInfo} from "os";
 
 export interface UserInfo {
     "id": number,
@@ -74,7 +75,10 @@ export default class OsmUserInfo {
         if(await mastodonApi.hasNoBot(username)){
             return undefined
         }
-        let useraccount = (await mastodonApi.userInfoFor(username)).acct
+        let useraccount = (await mastodonApi.userInfoFor(username))?.acct
+        if(useraccount === undefined){
+            useraccount = username
+        }
         if(!useraccount.startsWith("@")){
             useraccount = "@"+useraccount
         }

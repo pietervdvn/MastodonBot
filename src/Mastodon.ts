@@ -23,6 +23,7 @@ export interface CreateStatusParamsBase {
 }
 
 export default class MastodonPoster {
+    public readonly hostname: string;
     /**
      * The actual instance, see https://www.npmjs.com/package/mastodon
      * @private
@@ -30,7 +31,6 @@ export default class MastodonPoster {
     private readonly instance;
     private _dryrun: boolean;
     private _userInfoCache: Record<string, any> = {}
-    public readonly hostname: string;
 
     private constructor(masto, dryrun: boolean, hostname: string) {
         this.instance = masto
@@ -39,9 +39,9 @@ export default class MastodonPoster {
     }
 
     public static async construct(settings: LoginParams & { dryrun?: boolean }) {
-        return new MastodonPoster(await login(settings), settings.dryrun ?? false, 
+        return new MastodonPoster(await login(settings), settings.dryrun ?? false,
             new URL(settings.url).hostname
-            )
+        )
     }
 
     public async writeMessage(text: string, options?: CreateStatusParamsBase): Promise<{ id: string }> {
@@ -76,6 +76,9 @@ export default class MastodonPoster {
 
     public async hasNoBot(username: string): Promise<boolean> {
         const info = await this.userInfoFor(username)
+        if (info === undefined) {
+            return false
+        }
         const descrParts = info.note?.replace(/-/g, "")?.toLowerCase()?.split(" ") ?? []
         if (descrParts.indexOf("#nobot") >= 0 || descrParts.indexOf("#nomapcompletebot") >= 0) {
             return true
@@ -104,16 +107,21 @@ export default class MastodonPoster {
         followingCount: number,
         statusesCount: number,
         fields: { name: string, value: string }[]
-    }> {
+    } | undefined> {
         if (this._userInfoCache[username]) {
             return this._userInfoCache[username]
         }
-        const acct = await this.instance.v1.accounts.lookup({
-            acct: username,
-        });
-        const info = await this.instance.v1.accounts.fetch(acct.id)
-        this._userInfoCache[username] = info
-        return info
+        try {
+            const acct = await this.instance.v1.accounts.lookup({
+                acct: username,
+            });
+            const info = await this.instance.v1.accounts.fetch(acct.id)
+            this._userInfoCache[username] = info
+            return info
+        } catch (e) {
+            console.error("Could not fetch user details for ", username)
+            return undefined
+        }
     }
 
     /**

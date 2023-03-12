@@ -308,13 +308,13 @@ export class Postbuilder {
         } = await this.prepareImages(changesets)
         const imageUploader = new ImageUploader(randomImages, this._poster, this._globalConfig)
 
-        let timePeriod = "Yesterday"
+        let timePeriod = "yesterday"
         if (this._config.numberOfDays > 1) {
-            timePeriod = "In the past " + this._config.numberOfDays + " days"
+            timePeriod = "in the past " + this._config.numberOfDays + " days"
         }
         const singleTheme = this._config?.themeWhitelist?.length === 1 ? "/" + this._config.themeWhitelist[0] : ""
         let toSend: string[] = [
-            `${timePeriod}, ${perContributor.keys().length} people made ${totalStats.total} changes to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme}`,
+            `${perContributor.keys().length} people made ${totalStats.total} changes ${timePeriod} to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme}`,
             ""
         ]
 
@@ -344,7 +344,7 @@ export class Postbuilder {
                         continue
                     }
                     const overview = await this.createOverviewForContributor(uid, changesetsMade)
-                    if (overview.length + toSend.join("\n").length > 500) {
+                    if (overview.length + toSend.join("\n").length + 1 /*+1 for the separating \n*/ > 500) {
                         break
                     }
                     toSend.push(overview)

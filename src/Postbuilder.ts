@@ -67,21 +67,21 @@ export class Postbuilder {
         const pois = this._config.poisName ?? "points"
         if (create) {
             if (create == 1) {
-                overview.push("added one " + poi)
+                overview.push("added a " + poi)
             } else {
                 overview.push("added " + create + " " + pois)
             }
         }
         if (answer) {
             if (answer == 1) {
-                overview.push("answered one question")
+                overview.push("answered a question")
             } else {
                 overview.push("answered " + answer + " questions")
             }
         }
         if (images) {
             if (images == 1) {
-                overview.push("uploaded one image")
+                overview.push("uploaded an image")
             } else {
                 overview.push("uploaded " + images + " images")
             }
@@ -89,7 +89,7 @@ export class Postbuilder {
 
         if (move) {
             if (move == 1) {
-                overview.push("moved one " + poi)
+                overview.push("moved a " + poi)
             } else {
                 overview.push("moved " + move + " " + pois)
             }
@@ -97,7 +97,7 @@ export class Postbuilder {
 
         if (deleted) {
             if (deleted == 1) {
-                overview.push("deleted one " + poi)
+                overview.push("deleted a " + poi)
             } else {
                 overview.push("deleted " + deleted + " " + pois)
             }
@@ -105,7 +105,7 @@ export class Postbuilder {
 
         if (plantnetDetected) {
             if (plantnetDetected == 1) {
-                overview.push("detected one plant species with plantnet.org")
+                overview.push("detected a plant species with plantnet.org")
             } else {
                 overview.push("detected " + plantnetDetected + " plant species with plantnet.org")
             }
@@ -113,7 +113,7 @@ export class Postbuilder {
 
         if (linkedImages) {
             if (linkedImages == 1) {
-                overview.push("linked one linked")
+                overview.push("linked an image")
             } else {
                 overview.push("linked " + linkedImages + " images")
             }
@@ -159,7 +159,7 @@ export class Postbuilder {
 
         let contribCountStr = contributorCount + " contributors"
         if (contributorCount == 1) {
-            contribCountStr = "one contributor"
+            contribCountStr = "a contributor"
         }
         return `${contribCountStr} ${statistics.summaryText} on https://mapcomplete.osm.be/${theme}`
     }
@@ -375,7 +375,7 @@ export class Postbuilder {
                 const themeId = theme.key
                 const changesetsMade = perTheme.get(themeId)
                 const overview = await this.createOverviewForTheme(themeId, changesetsMade)
-                if (overview.length + toSend.join("\n").length > 500) {
+                if (overview.length + toSend.join("\n").length + 1 > 500) {
                     break
                 }
                 toSend.push(overview)

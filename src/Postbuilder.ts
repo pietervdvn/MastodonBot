@@ -161,7 +161,7 @@ export class Postbuilder {
         if (contributorCount == 1) {
             contribCountStr = "a contributor"
         }
-        return `${contribCountStr} ${statistics.summaryText} on https://mapcomplete.osm.be/${theme}`
+        return `${contribCountStr} ${statistics.summaryText} on https://mapcomplete.org/${theme}`
     }
 
     /**
@@ -314,7 +314,7 @@ export class Postbuilder {
         }
         const singleTheme = this._config?.themeWhitelist?.length === 1 ? "/" + this._config.themeWhitelist[0] : ""
         let toSend: string[] = [
-            `${perContributor.keys().length} people made ${totalStats.total} changes ${timePeriod} to #OpenStreetMap using https://mapcomplete.osm.be${singleTheme}`,
+            `${perContributor.keys().length} people made ${totalStats.total} changes ${timePeriod} to #OpenStreetMap using https://mapcomplete.org${singleTheme}`,
             ""
         ]
 

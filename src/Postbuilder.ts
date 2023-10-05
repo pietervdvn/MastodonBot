@@ -278,7 +278,8 @@ export class Postbuilder {
             const report = this._config.report
             const overpass = new Overpass(report)
             const data = await overpass.query()
-            const total = data.elements.length
+            const ids = data.elements.map(e => e.type+"/"+e.id)
+            const total = new Set<string>(ids).size
             const date = data.osm3s.timestamp_osm_base.substring(0, 10)
             lastPostId = (await this._poster.writeMessage(
                 report.post.replace(/{total}/g, "" + total).replace(/{date}/g, date),

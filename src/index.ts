@@ -67,6 +67,7 @@ export class Main {
         for (let i = 0; i < days; i++) {
             const targetDay = new Date(today.getTime() - 24 * 60 * 60 * 1000 * (i + 1))
             let changesetsDay: ChangeSetData[] = await osmcha.DownloadStatsForDay(targetDay.getUTCFullYear(), targetDay.getUTCMonth() + 1, targetDay.getUTCDate())
+            console.log("OsmCha has", changesets.length,"changesets for", targetDay.toISOString())
             for (const changeSetDatum of changesetsDay) {
                 if (changeSetDatum.properties.theme === undefined) {
                     console.warn("Changeset", changeSetDatum.id, " does not have theme given")
@@ -76,6 +77,7 @@ export class Main {
             }
 
         }
+        console.log("Found",changesets.length,"matching changesets")
 
         if (action.themeWhitelist?.length > 0) {
             const allowedThemes = new Set(action.themeWhitelist)

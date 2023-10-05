@@ -85,9 +85,9 @@ export class Main {
             changesets = changesets.filter(cs => allowedThemes.has(cs.properties.theme))
             if (changesets.length == 0) {
                 console.log("No changesets found for themes", action.themeWhitelist.join(", "))
-                return console.log("No changesets found for themes", action.themeWhitelist.join(", "))
+            }else{
+                console.log("Filtering for ", action.themeWhitelist, "yielded", changesets.length, "changesets (" + beforeCount + " before)")
             }
-            console.log("Filtering for ", action.themeWhitelist, "yielded", changesets.length, "changesets (" + beforeCount + " before)")
         }
 
         console.log("Building post...")

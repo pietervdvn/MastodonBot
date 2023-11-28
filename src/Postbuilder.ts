@@ -34,8 +34,150 @@ export class Postbuilder {
         ;
     }
 
+    public async buildMessage(date: string): Promise<void> {
+        const changesets = this._changesetsMade
+        let lastPostId: string = undefined
 
-    getStatisticsFor(changesetsMade?: ChangeSetData[]): {
+
+        if (this._config.report) {
+            const report = this._config.report
+            const overpass = new Overpass(report)
+            const data = await overpass.query()
+            const ids = data.elements.map(e => e.type + "/" + e.id)
+            const total = new Set<string>(ids).size
+            const date = data.osm3s.timestamp_osm_base.substring(0, 10)
+            lastPostId = (await this._poster.writeMessage(
+                report.post.replace(/{total}/g, "" + total).replace(/{date}/g, date),
+                {spoilerText: this._config.contentWarning}
+            )).id
+        }
+
+        const perContributor = new Histogram(changesets, cs => cs.properties.uid)
+        const topContributors = perContributor.sortedByCount({
+            countMethod: cs => {
+                let sum = 0
+                for (const metakey of Postbuilder.metakeys) {
+                    if (cs.properties[metakey]) {
+                        sum += cs.properties[metakey]
+                    }
+                }
+                return sum
+            }
+        });
+
+
+        const totalStats = this.getStatisticsFor()
+        const {
+            totalImagesCreated,
+            randomImages,
+            totalImageContributorCount
+        } = await this.prepareImages(changesets)
+        const imageUploader = new ImageUploader(randomImages, this._poster, this._globalConfig)
+
+        let timePeriod = "yesterday"
+        if (this._config.numberOfDays > 1) {
+            timePeriod = "in the past " + this._config.numberOfDays + " days"
+        }
+
+
+        if (this._config.showTopContributors && topContributors.length > 0) {
+            const singleTheme = this._config?.themeWhitelist?.length === 1 ? "/" + this._config.themeWhitelist[0] : ""
+            const toSend: string[] = [
+                `${perContributor.keys().length} people made ${totalStats.total} changes ${timePeriod} to #OpenStreetMap using https://mapcomplete.org${singleTheme}`,
+                ""
+            ]
+
+            // We group contributors that only contributed to 'etymology' as they otherwise spam the first entry
+
+            const {
+                alreadyMentioned,
+                message
+            } = await this.GroupTopcontributorsForTheme("etymology", topContributors, perContributor)
+            if (message?.length > 0) {
+                toSend.push(message)
+            }
+
+            for (const topContributor of topContributors) {
+                const uid = topContributor.key
+                if (alreadyMentioned.has(uid)) {
+                    continue
+                }
+                const changesetsMade = perContributor.get(uid)
+                try {
+                    const userInfo = new OsmUserInfo(Number(uid), this._globalConfig)
+                    const {nobot} = await userInfo.hasNoBotTag()
+                    if (nobot) {
+                        continue
+                    }
+                    const overview = await this.createOverviewForContributor(uid, changesetsMade)
+                    if (MastodonPoster.length23(overview) + MastodonPoster.length23(toSend.join("\n")) + 1 /*+1 for the separating \n*/ > 500) {
+                        break
+                    }
+                    toSend.push(overview)
+                } catch (e) {
+                    console.error("Could not add contributor " + uid, e)
+                }
+            }
+            lastPostId = (await this._poster.writeMessage(toSend.join("\n"),
+                {
+                    inReplyToId: lastPostId,
+                    mediaIds: await imageUploader.attemptToUpload(4),
+                    spoilerText: this._config.contentWarning
+                })).id
+        }
+
+        const perTheme = new Histogram(changesets, cs => {
+            return cs.properties.theme;
+        })
+
+        const mostPopularThemes = perTheme.sortedByCount({
+            countMethod: cs => this.getStatisticsFor([cs]).total,
+            dropZeroValues: true
+        })
+        if (this._config.showTopThemes && mostPopularThemes.length > 0) {
+            const toSend = []
+            for (const theme of mostPopularThemes) {
+                const themeId = theme.key
+                const changesetsMade = perTheme.get(themeId)
+                const overview = await this.createOverviewForTheme(themeId, changesetsMade)
+                if (MastodonPoster.length23(overview) + MastodonPoster.length23(toSend.join("\n")) + 1 > 500) {
+                    break
+                }
+                toSend.push(overview)
+            }
+
+            lastPostId = (await this._poster.writeMessage(toSend.join("\n"), {
+                inReplyToId: lastPostId,
+             //   mediaIds: await imageUploader.attemptToUpload(4),
+                spoilerText: this._config.contentWarning
+            })).id
+        }
+
+
+        const images = await imageUploader.attemptToUpload(4)
+        const authors = Array.from(new Set(imageUploader.getCurrentAuthors()))
+        if (authors.length > 0) {
+            await this._poster.writeMessage([
+                    "In total, " + totalImageContributorCount + " different contributors uploaded " + totalImagesCreated + " images.\n",
+                    "Images in this thread are randomly selected from them and were made by: ",
+                    ...authors,
+                    "",
+                    "A big thanks to everyone who is contributing!",
+                    "",
+                    "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
+
+                ].join("\n"), {
+                    inReplyToId: lastPostId,
+                    mediaIds: images,
+                    spoilerText: this._config.contentWarning
+                }
+            )
+        }
+
+
+    }
+
+    private getStatisticsFor(changesetsMade?: ChangeSetData[]): {
         total: number,
         answered?: number,
         created?: number,
@@ -132,8 +274,7 @@ export class Postbuilder {
 
     }
 
-
-    async createOverviewForContributor(uid: string, changesetsMade: ChangeSetData[]): Promise<string> {
+    private async createOverviewForContributor(uid: string, changesetsMade: ChangeSetData[]): Promise<string> {
         const userinfo = new OsmUserInfo(Number(uid), this._globalConfig)
         const inf = await userinfo.getUserInfo()
 
@@ -153,7 +294,7 @@ export class Postbuilder {
         return username + " " + statistics.summaryText + thematicMaps
     }
 
-    async createOverviewForTheme(theme: string, changesetsMade: ChangeSetData[]): Promise<string> {
+    private async createOverviewForTheme(theme: string, changesetsMade: ChangeSetData[]): Promise<string> {
         const statistics = this.getStatisticsFor(changesetsMade)
         const contributorCount = new Set(changesetsMade.map(cs => cs.properties.uid)).size
 
@@ -170,7 +311,7 @@ export class Postbuilder {
      * However, it is biased to select pictures from certain themes too
      * @param images
      */
-    public selectImages(images: ImageInfo[]):
+    private selectImages(images: ImageInfo[]):
         ImageInfo[] {
 
         const themeBonus = {
@@ -229,7 +370,13 @@ export class Postbuilder {
         return result
     }
 
-    public async GroupTopcontributorsForTheme(theme: string, topContributors: { key: string; count: number }[], perContributor: Histogram<ChangeSetData>, maxCount = 3): Promise<{ alreadyMentioned: Set<string>; message: string }> {
+    private async GroupTopcontributorsForTheme(theme: string, topContributors: {
+        key: string;
+        count: number
+    }[], perContributor: Histogram<ChangeSetData>, maxCount = 3): Promise<{
+        alreadyMentioned: Set<string>;
+        message: string
+    }> {
         const alreadyMentioned = new Set<string>()
         const etymologyContributors: { username: string }[] = []
         for (const topContributor of topContributors) {
@@ -250,7 +397,7 @@ export class Postbuilder {
             etymologyContributors.push({username})
         }
         let message: string
-        if(etymologyContributors.length <= 1){
+        if (etymologyContributors.length <= 1) {
             return {
                 alreadyMentioned: new Set<string>(),
                 message: undefined
@@ -269,152 +416,11 @@ export class Postbuilder {
         }
     }
 
-    public async buildMessage(date: string): Promise<void> {
-        const changesets = this._changesetsMade
-        let lastPostId: string = undefined
-
-
-        if (this._config.report) {
-            const report = this._config.report
-            const overpass = new Overpass(report)
-            const data = await overpass.query()
-            const ids = data.elements.map(e => e.type+"/"+e.id)
-            const total = new Set<string>(ids).size
-            const date = data.osm3s.timestamp_osm_base.substring(0, 10)
-            lastPostId = (await this._poster.writeMessage(
-                report.post.replace(/{total}/g, "" + total).replace(/{date}/g, date),
-                {spoilerText: this._config.contentWarning}
-            )).id
-        }
-
-        const perContributor = new Histogram(changesets, cs => cs.properties.uid)
-        const topContributors = perContributor.sortedByCount({
-            countMethod: cs => {
-                let sum = 0
-                for (const metakey of Postbuilder.metakeys) {
-                    if (cs.properties[metakey]) {
-                        sum += cs.properties[metakey]
-                    }
-                }
-                return sum
-            }
-        });
-
-
-        const totalStats = this.getStatisticsFor()
-        const {
-            totalImagesCreated,
-            randomImages,
-            totalImageContributorCount
-        } = await this.prepareImages(changesets)
-        const imageUploader = new ImageUploader(randomImages, this._poster, this._globalConfig)
-
-        let timePeriod = "yesterday"
-        if (this._config.numberOfDays > 1) {
-            timePeriod = "in the past " + this._config.numberOfDays + " days"
-        }
-        const singleTheme = this._config?.themeWhitelist?.length === 1 ? "/" + this._config.themeWhitelist[0] : ""
-        let toSend: string[] = [
-            `${perContributor.keys().length} people made ${totalStats.total} changes ${timePeriod} to #OpenStreetMap using https://mapcomplete.org${singleTheme}`,
-            ""
-        ]
-
-
-        if (this._config.showTopContributors && topContributors.length > 0) {
-
-            // We group contributors that only contributed to 'etymology' as they otherwise spam the first entry
-
-            const {
-                alreadyMentioned,
-                message
-            } = await this.GroupTopcontributorsForTheme("etymology", topContributors, perContributor)
-            if(message?.length > 0){
-                toSend.push(message)
-            }
-
-            for (const topContributor of topContributors) {
-                const uid = topContributor.key
-                if (alreadyMentioned.has(uid)) {
-                    continue
-                }
-                const changesetsMade = perContributor.get(uid)
-                try {
-                    const userInfo = new OsmUserInfo(Number(uid), this._globalConfig)
-                    const {nobot} = await userInfo.hasNoBotTag()
-                    if (nobot) {
-                        continue
-                    }
-                    const overview = await this.createOverviewForContributor(uid, changesetsMade)
-                    if (overview.length + toSend.join("\n").length + 1 /*+1 for the separating \n*/ > 500) {
-                        break
-                    }
-                    toSend.push(overview)
-                } catch (e) {
-                    console.error("Could not add contributor " + uid, e)
-                }
-            }
-            lastPostId = (await this._poster.writeMessage(toSend.join("\n"),
-                {
-                    inReplyToId: lastPostId,
-                    mediaIds: await imageUploader.attemptToUpload(4),
-                    spoilerText: this._config.contentWarning
-                })).id
-            toSend = []
-        }
-
-        const perTheme = new Histogram(changesets, cs => {
-            return cs.properties.theme;
-        })
-
-        const mostPopularThemes = perTheme.sortedByCount({
-            countMethod: cs => this.getStatisticsFor([cs]).total,
-            dropZeroValues: true
-        })
-        if (this._config.showTopThemes && mostPopularThemes.length > 0) {
-
-            for (const theme of mostPopularThemes) {
-                const themeId = theme.key
-                const changesetsMade = perTheme.get(themeId)
-                const overview = await this.createOverviewForTheme(themeId, changesetsMade)
-                if (overview.length + toSend.join("\n").length + 1 > 500) {
-                    break
-                }
-                toSend.push(overview)
-            }
-
-            lastPostId = (await this._poster.writeMessage(toSend.join("\n"), {
-                inReplyToId: lastPostId,
-                mediaIds: await imageUploader.attemptToUpload(4),
-                spoilerText: this._config.contentWarning
-            })).id
-            toSend = []
-        }
-
-
-        const images = await imageUploader.attemptToUpload(4)
-        const authors = Array.from(new Set(imageUploader.getCurrentAuthors()))
-        if (authors.length > 0) {
-            await this._poster.writeMessage([
-                    "In total, " + totalImageContributorCount + " different contributors uploaded " + totalImagesCreated + " images.\n",
-                    "Images in this thread are randomly selected from them and were made by: ",
-                    ...authors,
-                    "",
-                    "A big thanks to everyone who is contributing!",
-                    "",
-                    "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
-
-                ].join("\n"), {
-                    inReplyToId: lastPostId,
-                    mediaIds: images,
-                    spoilerText: this._config.contentWarning
-                }
-            )
-        }
-
-
-    }
-
-    private async prepareImages(changesets: ChangeSetData[]): Promise<{ randomImages: { image: string, changeset: ChangeSetData }[], totalImagesCreated: number, totalImageContributorCount: number }> {
+    private async prepareImages(changesets: ChangeSetData[]): Promise<{
+        randomImages: { image: string, changeset: ChangeSetData }[],
+        totalImagesCreated: number,
+        totalImageContributorCount: number
+    }> {
         const withImage: ChangeSetData[] = changesets.filter(cs => cs.properties["add-image"] > 0)
         const totalImagesCreated = Utils.Sum(withImage.map(cs => cs.properties["add-image"]))
 

@@ -11,7 +11,7 @@ export class Main {
     private readonly _config: Config;
 
     constructor(config: string | Config) {
-        if(config === undefined){
+        if (config === undefined) {
             console.log("Needs an argument: path of config file")
             throw "No path given"
         }
@@ -37,19 +37,19 @@ export class Main {
 
 
         const start = Date.now()
-        try {
-            for (const action of this._config.actions) {
-                console.log("Running action", action)
+        for (const action of this._config.actions) {
+            try {
+                console.log("# Running action", action)
                 await this.runMapCompleteOverviewAction(poster, action)
+            } catch (e) {
+                console.error("Caught top level exception: ", e)
+                console.log(e.stack)
+                const end = Date.now()
+                const timeNeeded = Math.floor((end - start) / 1000)
+                await poster.writeMessage("@pietervdvn@en.osm.town Running MapComplete bot failed in " + timeNeeded + "seconds, the error is " + e, {
+                    visibility: "direct"
+                })
             }
-        } catch (e) {
-            console.error("Caught top level exception: ", e)
-            console.log(e.stack)
-            const end = Date.now()
-            const timeNeeded = Math.floor((end - start) / 1000)
-            await poster.writeMessage("@pietervdvn@en.osm.town Running MapComplete bot failed in " + timeNeeded + "seconds, the error is " + e, {
-                visibility: "direct"
-            })
         }
 
     }
@@ -67,7 +67,7 @@ export class Main {
         for (let i = 0; i < days; i++) {
             const targetDay = new Date(today.getTime() - 24 * 60 * 60 * 1000 * (i + 1))
             let changesetsDay: ChangeSetData[] = await osmcha.DownloadStatsForDay(targetDay.getUTCFullYear(), targetDay.getUTCMonth() + 1, targetDay.getUTCDate())
-            console.log("OsmCha has", changesets.length,"changesets for", targetDay.toISOString())
+            console.log("OsmCha has", changesets.length, "changesets for", targetDay.toISOString())
             for (const changeSetDatum of changesetsDay) {
                 if (changeSetDatum.properties.theme === undefined) {
                     console.warn("Changeset", changeSetDatum.id, " does not have theme given")
@@ -77,7 +77,7 @@ export class Main {
             }
 
         }
-        console.log("Found",changesets.length,"matching changesets")
+        console.log("Found", changesets.length, "matching changesets")
 
         if (action.themeWhitelist?.length > 0) {
             const allowedThemes = new Set(action.themeWhitelist)
@@ -85,7 +85,7 @@ export class Main {
             changesets = changesets.filter(cs => allowedThemes.has(cs.properties.theme))
             if (changesets.length == 0) {
                 console.log("No changesets found for themes", action.themeWhitelist.join(", "))
-            }else{
+            } else {
                 console.log("Filtering for ", action.themeWhitelist, "yielded", changesets.length, "changesets (" + beforeCount + " before)")
             }
         }

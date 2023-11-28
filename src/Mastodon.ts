@@ -44,12 +44,36 @@ export default class MastodonPoster {
         )
     }
 
+    /**
+     * Returns the length, counting a link as 23 characters
+     * @param text
+     */
+    public static length23(text: string): number{
+        const splitted = text.split(" ")
+        
+        let total = 0;
+        for (const piece of splitted) {
+            try{
+                // This is a link, it counts for 23 characters
+               // https://docs.joinmastodon.org/user/posting/#links
+               new URL(piece)
+               total += 23 
+            }catch(e){
+                total += piece.length
+            }
+        }
+        // add the spaces
+        total += splitted.length - 1
+        return total
+        
+    }
+
     public async writeMessage(text: string, options?: CreateStatusParamsBase): Promise<{ id: string }> {
 
         if (options?.visibility === "direct" && text.indexOf("@") < 0) {
             throw ("Error: you try to send a direct message, but it has no username...")
         }
-        if (text.length > 500) {
+        if (MastodonPoster.length23(text) > 500) {
             console.log(text.split("\n").map(txt => "  > " + txt).join("\n"))
             throw "Error: text is too long:" + text.length
 
@@ -61,17 +85,19 @@ export default class MastodonPoster {
         }
 
         if (this._dryrun) {
-            console.log("Dryrun enabled - not posting", options?.visibility ?? "public", "message: \n" + text.split("\n").map(txt => "  > " + txt).join("\n"))
+            console.log("Dryrun enabled - not posting", options?.visibility ?? "public", `message (length ${text.length}, link23: ${MastodonPoster.length23(text)}): 
+${text.split("\n").map(txt => "  > " + txt).join("\n")}`)
             return {id: "some_id"}
         }
-        const statusUpate = await this.instance.v1.statuses.create({
+        console.log("Uploading message", text.substring(0, 25)+"...", `(length ${text.length}, link23: ${MastodonPoster.length23(text)})`)
+        console.log(text.split("\n").map(txt => "  > " + txt).join("\n"))
+        const statusUpdate = await this.instance.v1.statuses.create({
             visibility: 'public',
             ...(options ?? {}),
             status: text
         })
-        console.log("Posted to", statusUpate.url)
-        console.log(text.split("\n").map(txt => "  > " + txt).join("\n"))
-        return statusUpate
+        console.log("Posted successfully to", statusUpdate.url)
+        return statusUpdate
     }
 
     public async hasNoBot(username: string): Promise<boolean> {

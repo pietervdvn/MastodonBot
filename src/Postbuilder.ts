@@ -148,7 +148,7 @@ export class Postbuilder {
 
             lastPostId = (await this._poster.writeMessage(toSend.join("\n"), {
                 inReplyToId: lastPostId,
-             //   mediaIds: await imageUploader.attemptToUpload(4),
+                mediaIds: await imageUploader.attemptToUpload(4),
                 spoilerText: this._config.contentWarning
             })).id
         }

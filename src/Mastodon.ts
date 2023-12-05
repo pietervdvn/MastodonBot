@@ -177,4 +177,8 @@ ${text.split("\n").map(txt => "  > " + txt).join("\n")}`)
             return mediaAttachment.id
         }
     }
+
+    static totalLength(overview: string, rest: string[]) {
+        return overview.length + rest.join("\n").length + 1
+    }
 }

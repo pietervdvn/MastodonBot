@@ -110,7 +110,7 @@ export class Postbuilder {
                         continue
                     }
                     const overview = await this.createOverviewForContributor(uid, changesetsMade)
-                    if (MastodonPoster.length23(overview) + MastodonPoster.length23(toSend.join("\n")) + 1 /*+1 for the separating \n*/ > 500) {
+                    if (MastodonPoster.totalLength(overview, toSend) > 500) {
                         break
                     }
                     toSend.push(overview)
@@ -140,7 +140,7 @@ export class Postbuilder {
                 const themeId = theme.key
                 const changesetsMade = perTheme.get(themeId)
                 const overview = await this.createOverviewForTheme(themeId, changesetsMade)
-                if (MastodonPoster.length23(overview) + MastodonPoster.length23(toSend.join("\n")) + 1 > 500) {
+                if (MastodonPoster.totalLength(overview, toSend) > 500) {
                     break
                 }
                 toSend.push(overview)

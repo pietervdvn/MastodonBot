@@ -42,6 +42,10 @@ export interface MapCompleteUsageOverview {
      * If omitted: show all themes
      */
     themeWhitelist?: string[]
+    /**
+     * Show a thank you note
+     */
+    showThankYou?: boolean | true
     
 }
 
@@ -64,4 +68,6 @@ export default interface Config {
         dryrun?: boolean
     },
     actions: MapCompleteUsageOverview []
+
+   
 }

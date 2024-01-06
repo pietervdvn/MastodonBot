@@ -157,13 +157,15 @@ export class Postbuilder {
         const images = await imageUploader.attemptToUpload(4)
         const authors = Array.from(new Set(imageUploader.getCurrentAuthors()))
         if (authors.length > 0) {
+            let imageCount = totalImagesCreated === 1 ? "one image" : totalImagesCreated + " images"
+            let contributors = totalImageContributorCount === 1 ? "One contributor": totalImageContributorCount+" contributors"
+            let contributorCountMultiple =  `${contributors} uploaded ${imageCount}.`
+            let thankYou = (this._config.showThankYou ?? true) ?  "\nA big thanks to everyone who is contributing!\n\n" : ""
             await this._poster.writeMessage([
-                    "In total, " + totalImageContributorCount + " different contributors uploaded " + totalImagesCreated + " images.\n",
+                    contributorCountMultiple + "\n",
                     "Images in this thread are randomly selected from them and were made by: ",
                     ...authors,
-                    "",
-                    "A big thanks to everyone who is contributing!",
-                    "",
+                    thankYou,
                     "All changes were made on " + date + (this._config.numberOfDays > 1 ? ` or at most ${this._config.numberOfDays} days before` : "")
 
                 ].join("\n"), {

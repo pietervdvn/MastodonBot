@@ -9,7 +9,7 @@ export default class ImgurAttribution {
      * Download the attribution from a given URL
      */
     public static async DownloadAttribution(url: string): Promise<{license: string, author: string}> {
-        const hash = url.substr("https://i.imgur.com/".length).split(".jpg")[0]
+        const hash = url.substr("https://i.imgur.com/".length).split(/.jpe?g/i)[0]
 
         const apiUrl = "https://api.imgur.com/3/image/" + hash
         const response = await Utils.DownloadJson(apiUrl,  {

@@ -86,7 +86,7 @@ export default class OsmCha {
             Referer:
                 "https://osmcha.org/?filters=%7B%22date__gte%22%3A%5B%7B%22label%22%3A%222020-07-05%22%2C%22value%22%3A%222020-07-05%22%7D%5D%2C%22editor%22%3A%5B%7B%22label%22%3A%22mapcomplete%22%2C%22value%22%3A%22mapcomplete%22%7D%5D%7D",
             "Content-Type": "application/json",
-            Authorization: "Token 6e422e2afedb79ef66573982012000281f03dc91",
+            Authorization: "Token 9cc11ad2868778272eadbb1a423ebb507184bc04",
             DNT: "1",
             Connection: "keep-alive",
             TE: "Trailers",

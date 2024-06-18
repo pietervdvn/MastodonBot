@@ -1,15 +1,16 @@
 import https from "https";
 import * as fs from "fs";
 import {DOMParser} from '@xmldom/xmldom'
+import * as fakedom from "fake-dom"
 
 export default class Utils {
     public static async DownloadJson(url, headers?: any): Promise<any> {
         const data = await Utils.Download(url, headers)
-        try{
-            
-        return JSON.parse(data.content)
-        }catch (e) {
-            console.log("Could not parse the result of ", url,": not a valid json:\n  ",data.content)
+        try {
+
+            return JSON.parse(data.content)
+        } catch (e) {
+            console.log("Could not parse the result of ", url, ": not a valid json:\n  ", data.content)
             throw e
         }
     }
@@ -104,5 +105,25 @@ export default class Utils {
                 }
             });
         });
+    }
+
+    public static stripHtmlToInnerText(htmlText: string): string;
+    public static stripHtmlToInnerText(htmlText: string | undefined): string | undefined;
+
+    /**
+     *
+     * const input = "#<span>nobot</span>"
+     * Utils.stripHtmlToInnerText(input) // => "#nobot"
+     */
+    public static stripHtmlToInnerText(htmlText: string | undefined): string | undefined {
+        if (fakedom === undefined || window === undefined) {
+            throw "FakeDom not initialized"
+        }
+        if (htmlText === undefined) {
+            return undefined
+        }
+        const el = document.createElement("div")
+        el.innerHTML = htmlText
+        return el.textContent
     }
 }

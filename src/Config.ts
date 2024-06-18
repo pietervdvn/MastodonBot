@@ -66,8 +66,6 @@ export default interface Config {
     mastodonAuth: LoginSettings & {
         /** IF set: prints to console instead of to Mastodon*/
         dryrun?: boolean
-    },
+    }
     actions: MapCompleteUsageOverview []
-
-   
 }

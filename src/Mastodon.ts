@@ -1,5 +1,6 @@
 import {login, LoginParams} from 'masto';
 import * as fs from "fs";
+import Utils from "./Utils";
 
 export interface LoginSettings {
     url: string,
@@ -48,24 +49,24 @@ export default class MastodonPoster {
      * Returns the length, counting a link as 23 characters
      * @param text
      */
-    public static length23(text: string): number{
+    public static length23(text: string): number {
         const splitted = text.split(" ")
-        
+
         let total = 0;
         for (const piece of splitted) {
-            try{
+            try {
                 // This is a link, it counts for 23 characters
                // https://docs.joinmastodon.org/user/posting/#links
                new URL(piece)
-               total += 23 
-            }catch(e){
+               total += 23
+            } catch (e) {
                 total += piece.length
             }
         }
         // add the spaces
         total += splitted.length - 1
         return total
-        
+
     }
 
     public async writeMessage(text: string, options?: CreateStatusParamsBase): Promise<{ id: string }> {
@@ -85,11 +86,11 @@ export default class MastodonPoster {
         }
 
         if (this._dryrun) {
-            console.log("Dryrun enabled - not posting", options?.visibility ?? "public", `message (length ${text.length}, link23: ${MastodonPoster.length23(text)}): 
+            console.log("Dryrun enabled - not posting", options?.visibility ?? "public", `message (length ${text.length}, link23: ${MastodonPoster.length23(text)}):
 ${text.split("\n").map(txt => "  > " + txt).join("\n")}`)
             return {id: "some_id"}
         }
-        console.log("Uploading message", text.substring(0, 25)+"...", `(length ${text.length}, link23: ${MastodonPoster.length23(text)})`)
+        console.log("Uploading message", text.substring(0, 25) + "...", `(length ${text.length}, link23: ${MastodonPoster.length23(text)})`)
         console.log(text.split("\n").map(txt => "  > " + txt).join("\n"))
         const statusUpdate = await this.instance.v1.statuses.create({
             visibility: 'public',
@@ -100,17 +101,20 @@ ${text.split("\n").map(txt => "  > " + txt).join("\n")}`)
         return statusUpdate
     }
 
+
     public async hasNoBot(username: string): Promise<boolean> {
         const info = await this.userInfoFor(username)
         if (info === undefined) {
             return false
         }
-        const descrParts = info.note?.replace(/-/g, "")?.toLowerCase()?.split(" ") ?? []
+        const descrParts = Utils.stripHtmlToInnerText(info.note)?.replace(/-/g, "")?.toLowerCase() ?? ""
         if (descrParts.indexOf("#nobot") >= 0 || descrParts.indexOf("#nomapcompletebot") >= 0) {
+            console.log("Found nobot in mastodon description for", username)
             return true
         }
         const nobot = info.fields.find(f => f.name === "nobot")?.value ?? ""
         if (nobot.toLowerCase() === "yes" || nobot.toLowerCase() === "true") {
+            console.log("Found nobot in mastodon fields for", username)
             return true
         }
         return false

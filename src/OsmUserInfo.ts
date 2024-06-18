@@ -28,7 +28,7 @@ export default class OsmUserInfo {
             osmBackend?: string,
             cacheDir?: string
         }) {
-        if(userId === undefined || userId === null || Number.isNaN(userId)){
+        if (userId === undefined || userId === null || Number.isNaN(userId)) {
             throw new Error("Invalid userid: " + userId)
         }
         this._userId = userId;
@@ -41,15 +41,15 @@ export default class OsmUserInfo {
         }
 
     }
-    
+
     public async hasNoBotTag(): Promise<{
         nobot: boolean,
         nomention: boolean
-    }>{
+    }> {
         const description = (await this.getUserInfo()).description ?? ""
         const split = description.toLowerCase().replace(/-/g, "").split(" ")
-        const nobot = split.indexOf("#nobot") >=0 || split.indexOf("#nomapcompletebot") >= 0
-        const nomention = split.indexOf("#nobotmention") >=0 || split.indexOf("#nomapcompletebotmention") >= 0
+        const nobot = split.indexOf("#nobot") >= 0 || split.indexOf("#nomapcompletebot") >= 0
+        const nomention = split.indexOf("#nobotmention") >= 0 || split.indexOf("#nomapcompletebotmention") >= 0
         return {nobot, nomention}
     }
 
@@ -60,7 +60,7 @@ export default class OsmUserInfo {
      */
     public async GetMastodonUsername(mastodonApi: MastodonPoster): Promise<string | undefined> {
         const {nomention} = await this.hasNoBotTag()
-        if(nomention){
+        if (nomention) {
             return undefined
         }
         const mastodonLinks = await this.getMeLinks()
@@ -68,22 +68,22 @@ export default class OsmUserInfo {
         if (mastodonLinks.length <= 0) {
             return undefined
         }
-        
+
         const url = new URL(mastodonLinks[0])
-        const username = url.pathname.substring(1) +(url.host === mastodonApi.hostname ? "" : "@" + url.host)
-        
-        if(await mastodonApi.hasNoBot(username)){
+        const username = url.pathname.substring(1) + (url.host === mastodonApi.hostname ? "" : "@" + url.host)
+
+        if (await mastodonApi.hasNoBot(username)) {
             return undefined
         }
         let useraccount = (await mastodonApi.userInfoFor(username))?.acct
-        if(useraccount === undefined){
+        if (useraccount === undefined) {
             useraccount = username
         }
-        if(!useraccount.startsWith("@")){
-            useraccount = "@"+useraccount
+        if (!useraccount.startsWith("@")) {
+            useraccount = "@" + useraccount
         }
         return useraccount
-    } 
+    }
 
     public async getMeLinks(): Promise<string[]> {
         const userdata = await this.getUserInfo()
@@ -103,8 +103,8 @@ export default class OsmUserInfo {
             const cacheAgeInSeconds = (Date.now() - cacheCreatedTime.getTime()) / 1000
             if (cacheAgeInSeconds > OsmUserInfo.max_cache_age_seconds) {
                 console.log("Cache is old, unlinking...")
-            }else{
-                
+            } else {
+
                 try {
                     this._userData = JSON.parse(fs.readFileSync(this._cachingPath, "utf8"))
                     return this._userData

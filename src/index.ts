@@ -10,7 +10,7 @@ export class Main {
 
     private readonly _config: Config;
 
-    constructor(config: string | Config) {
+    constructor(config: string | Config, dryrun = false) {
         if (config === undefined) {
             console.log("Needs an argument: path of config file")
             throw "No path given"
@@ -19,6 +19,9 @@ export class Main {
             this._config = JSON.parse(fs.readFileSync(config, {encoding: "utf-8"}))
         } else {
             this._config = config;
+        }
+        if (dryrun) {
+            this._config.mastodonAuth.dryrun = true
         }
         this._config.osmBackend ??= "https://www.openstreetmap.org"
     }
@@ -100,4 +103,4 @@ export class Main {
 }
 
 
-new Main(process.argv[2]).main().then(_ => console.log("All done"))
+new Main(process.argv[2], process.argv[3] !== undefined).main().then(_ => console.log("All done"))

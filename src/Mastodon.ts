@@ -90,7 +90,7 @@ export default class MastodonPoster {
 ${text.split("\n").map(txt => "  > " + txt).join("\n")}`)
             return {id: "some_id"}
         }
-        console.log("Uploading message", text.substring(0, 25) + "...", `(length ${text.length}, link23: ${MastodonPoster.length23(text)})`)
+        console.log("Uploading message ("+(options.mediaIds?.length ?? "no"),"attachments):\n", text.substring(0, 25) + "...", `(length ${text.length}, link23: ${MastodonPoster.length23(text)})`)
         console.log(text.split("\n").map(txt => "  > " + txt).join("\n"))
         const statusUpdate = await this.instance.v1.statuses.create({
             visibility: 'public',

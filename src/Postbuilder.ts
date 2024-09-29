@@ -441,7 +441,7 @@ export class Postbuilder {
             const osmChangeset = await Utils.DownloadXml(url)
             const osmChangesetTags: { k: string, v: string }[] = Array.from(osmChangeset.getElementsByTagName("tag"))
                 .map(tag => ({k: tag.getAttribute("k"), v: tag.getAttribute("v")}))
-                .filter(kv => kv.k.startsWith("image"))
+                .filter(kv => kv.k.startsWith("panoramax"))
 
             for (const kv of osmChangesetTags) {
                 if (seenURLS.has(kv.v)) {

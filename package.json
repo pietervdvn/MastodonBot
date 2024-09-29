@@ -32,6 +32,7 @@
     "masto": "^5.4.0",
     "mocha": "^10.0.0",
     "node-fetch": "^3.3.0",
+    "panoramax-js": "^0.3.7",
     "showdown": "^2.1.0",
     "ts-node": "^10.7.0"
   },

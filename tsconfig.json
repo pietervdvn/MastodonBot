@@ -6,14 +6,14 @@
     "esModuleInterop": true,
     "module": "commonjs",
     "moduleResolution": "node",
-    "target": "es2015",
+    "target": "es2022",
     "noImplicitAny": false,
     "sourceMap": false,
     "outDir": "./lib",
     "types": [
       "node"
     ],
-    "lib": ["dom"]
+    "lib": ["dom","es2022"]
   },
   "include": [
     "./src/**/*"

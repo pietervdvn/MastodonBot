@@ -73,7 +73,7 @@ export default class ImageUploader {
         const path = this._globalConfig.cacheDir + "/image_" + image.image
         console.log("Fetching image:", imageData.assets.sd.href)
         await Utils.DownloadBlob(imageData.assets.sd.href, path)
-        const mediaId = await this._poster.uploadImage(path, "Image taken by " + authorName + ", available under " + imageData.properties["geovisio:license"] + ". It is made with the thematic map " + image.changeset.properties.theme + " in changeset https://openstreetmap.org/changeset/" + image.changeset.id)
+        const mediaId = await this._poster.uploadImage(path, "Image taken by " + authorName + ", available under " + (imageData.properties["geovisio:license"] ?? "CC-BY-SA")+ ". It is made with the thematic map " + image.changeset.properties.theme + " in changeset https://openstreetmap.org/changeset/" + image.changeset.id)
 
         this._authors.push(authorName)
         return mediaId

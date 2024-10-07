@@ -1,7 +1,6 @@
 import Utils from "./Utils";
 import * as fs from "fs";
 import MastodonPoster from "./Mastodon";
-import {userInfo} from "os";
 
 export interface UserInfo {
     "id": number,
@@ -23,7 +22,7 @@ export default class OsmUserInfo {
     private _userData: UserInfo = undefined
     private readonly _cachingPath: string | undefined;
 
-    constructor(userId: number, options:
+    constructor(userId: number, options?:
         {
             osmBackend?: string,
             cacheDir?: string
@@ -54,8 +53,8 @@ export default class OsmUserInfo {
     }
 
     /**
-     * Gets the Mastodon username of the this OSM-user to ping them.
-     * @param mastodonApi: will be used to lookup the metadata of the user; if they have '#nobot' in their bio, don't mention them
+     * Gets the Mastodon username of the given OSM-user to ping them.
+     * @param mastodonApi will be used to lookup the metadata of the user; if they have '#nobot' in their bio, don't mention them
      * @constructor
      */
     public async GetMastodonUsername(mastodonApi: MastodonPoster): Promise<string | undefined> {
@@ -70,7 +69,7 @@ export default class OsmUserInfo {
         }
 
         const url = new URL(mastodonLinks[0])
-        const username = url.pathname.substring(1) + (url.host === mastodonApi.hostname ? "" : "@" + url.host)
+        const username = url.pathname.split("/").at(-1) + (url.host === mastodonApi.hostname ? "" : "@" + url.host)
 
         if (await mastodonApi.hasNoBot(username)) {
             return undefined
@@ -85,6 +84,9 @@ export default class OsmUserInfo {
         return useraccount
     }
 
+    /**
+     * Gets the 'href' of every link with `rel=me`
+     */
     public async getMeLinks(): Promise<string[]> {
         const userdata = await this.getUserInfo()
         const div = document.createElement("div")

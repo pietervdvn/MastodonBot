@@ -23,7 +23,7 @@ There are currently two bot accounts using this code:
 If you want to be mentioned by this bot:
 
 - [Edit your OSM profile], make it include `<a href='https://<mastodon-host>/@<your-username/' rel='me'>My fediverse acount</a>`
-- On Mastodon, edit your profile. Put a link to your profile in the "extra fields":
+- On Mastodon, edit your profile. Put a link to your profile (`https://www.openstreetmap.org/user/<your profile>`) in the "extra fields":
 
 ![image](https://github.com/user-attachments/assets/7da18376-2275-4400-a835-865b139ecfd3)
 

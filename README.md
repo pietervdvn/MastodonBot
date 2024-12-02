@@ -11,6 +11,25 @@ Changesets which have the `add-image`-tag are downloaded from the OSM-api and cr
 Note that the image selection process is opinionated: some themes (artwork, nature, trees, ...) have a higher probability of being picked.
 Furthermore, it tries to pick at most one image per contributor - so images by the same contributor will only be used if there are more images to add then contributors.
 
+## Instances
+
+There are currently two bot accounts using this code:
+
+- [MapComplete edits](https://en.osm.town/@mapcomplete_edits)
+- [Ghostbike bot](https://masto.bike/@ghostbikebot)
+
+## Enabling mentions
+
+If you want to be mentioned by this bot:
+
+- [Edit your OSM profile], make it include `<a href='https://<mastodon-host>/@<your-username/' rel='me'>My fediverse acount</a>`
+- On Mastodon, edit your profile. Put a link to your profile in the "extra fields":
+
+![image](https://github.com/user-attachments/assets/7da18376-2275-4400-a835-865b139ecfd3)
+
+- Save the changes and inspect your mastodon profile. The link to your OSM-account should receive a checkmark (and might become green, depending on the mastodon client)
+- Make edits with [MapComplete](https://mapcomplete.org)
+
 ## Disabling mentions
 
 You can indicate this to the bot in the following way:

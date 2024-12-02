@@ -23,12 +23,15 @@ There are currently two bot accounts using this code:
 If you want to be mentioned by this bot:
 
 - [Edit your OSM profile], make it include `<a href='https://<mastodon-host>/@<your-username/' rel='me'>My fediverse acount</a>`
+- Make edits with [MapComplete](https://mapcomplete.org)
+
+### Optional: add a verified link
+
 - On Mastodon, edit your profile. Put a link to your profile (`https://www.openstreetmap.org/user/<your profile>`) in the "extra fields":
 
 ![image](https://github.com/user-attachments/assets/7da18376-2275-4400-a835-865b139ecfd3)
 
 - Save the changes and inspect your mastodon profile. The link to your OSM-account should receive a checkmark (and might become green, depending on the mastodon client)
-- Make edits with [MapComplete](https://mapcomplete.org)
 
 ## Disabling mentions
 

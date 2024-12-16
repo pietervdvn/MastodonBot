@@ -1,3 +1,10 @@
+# REPO MOVED!
+
+Hey,
+
+The development for this repository moved to [source.mapcomplete.org](https://source.mapcomplete.org/MapComplete/MastodonBot)
+Pull requests, issues, ... are welcome there
+
 # Mastodon-Bot
 
 This is a bot which is built to post a daily message about mapcomplete-usage.
